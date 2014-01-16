@@ -1,0 +1,168 @@
+/*
+This file is part of PYCTS, the PY151 Credit Tracking System.
+
+PYCTS is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+PYCTS is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with PYCTS.  If not, see <http://www.gnu.org/licenses/>.
+
+PYCTS and this file are Copyright 2011 by Mark Platek.
+*/
+
+
+* {
+	margin: 0;
+	padding: 0;
+}
+
+body {
+	font-family: dejavu sans, arial, helvetica, sans-serif;
+	background-color: white;
+	color: black;
+	width: 60%;
+	min-width: 700px;
+	margin-left: auto;
+	margin-right: auto;
+}
+
+a {
+	outline: none;
+}
+
+/* ------------------------------------------------------------------------- */
+/* main page */
+/* ------------------------------------------------------------------------- */
+#front_page {
+	margin-left: auto;
+	margin-right: auto;
+	text-align: justify;
+	line-height: 1.5;
+}
+
+#front_page h1 {
+	margin: 1em 0em 1em 0em;
+	text-align: center;
+}
+
+#front_page p {
+	margin-bottom: 1em;
+}
+
+#front_page label {
+}
+
+#front_page input.text {
+}
+
+#front_page fieldset {
+	text-align: center;
+	padding: 1.5em;
+}
+
+/* ------------------------------------------------------------------------- */
+/* system error messages */
+/* ------------------------------------------------------------------------- */
+p.system_message {
+	margin: 1em 0em 1em 0em;
+}
+
+a.system_message {
+	color: blue;
+}
+
+/* ------------------------------------------------------------------------- */
+/* student navigation bar */
+/* ------------------------------------------------------------------------- */
+#student_navbar {
+	margin: 0;
+	min-height: 68px;	/* the logo image is 48 pixels high and has 10px of top and bottom padding */
+	background-color: #024001;
+}
+
+#student_navbar li {
+	list-style-type: none;
+	display: block;
+	float: left;
+	padding: 10px 1em 0 10px;;
+}
+
+#student_navbar li#logout {
+	float: right;
+}
+
+#student_navbar img {
+	border: none;
+}
+
+#student_navbar a {
+	color: white;
+	text-decoration: none;
+	padding: 3px;
+}
+
+#student_navbar a:hover {
+	background-color: #333;
+	color: black;
+	background-color: white;
+}
+
+#student_navbar a.img:hover {
+	background-color: #024001;
+}
+
+/* ------------------------------------------------------------------------- */
+/* student content */
+/* ------------------------------------------------------------------------- */
+#student_content {
+	text-align: center;
+	line-height: 1.5;
+}
+
+#student_content h1 {
+	margin: 1em 0em 1em 0em;
+}
+
+#student_content table {
+	border-collapse: collapse;
+	text-align: center;
+	width: 100%;
+}
+
+#student_content p {
+	margin: 1em 0em 1em 0em;
+	text-align: justify;
+}
+
+#student_content p.table {
+	text-align: center;
+}
+
+#student_content th, td {
+	margin: 0px;
+	border: 1px solid black;
+	padding: .5em;
+}
+
+#student_content th {
+	padding: 1em;
+}
+
+p#timestamp {
+	font-size: smaller;
+	font-style: italic;
+	margin-top: 4em;
+	padding-top: .5em;
+	text-align: center;
+	border-top: 1px solid black;
+	width: 80%;
+	margin-left: auto;
+	margin-right: auto;
+}

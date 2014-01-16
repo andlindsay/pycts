@@ -1,0 +1,136 @@
+%
+% This file is part of PYCTS, the PY151 Credit Tracking System.
+%
+% PYCTS is free software: you can redistribute it and/or modify
+% it under the terms of the GNU General Public License as published by
+% the Free Software Foundation, either version 3 of the License, or
+% (at your option) any later version.
+%
+% PYCTS is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+% GNU General Public License for more details.
+%
+% You should have received a copy of the GNU General Public License
+% along with PYCTS.  If not, see <http://www.gnu.org/licenses/>.
+%
+% PYCTS and this file are Copyright 2011 by Mark Platek.
+%
+
+\documentclass[letterpaper,titlepage]{article}
+
+\usepackage[margin=3cm]{geometry}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{float}
+
+\setlength\parindent{0pt}
+\setlength{\parskip}{9pt}
+
+% PYCTS version
+\newcommand{\softwareversion}{0.4.0.0}
+
+\title{ {\Huge {\bf PYCTS Administrative and Technical Manual} } \\ {\Large Software Version: \softwareversion } }
+\author{Mark Platek \\ Spring 2011}
+\date{Prepared for: \\ Department of Psychology, Clarkson University}
+
+\begin{document}
+\maketitle
+
+\tableofcontents
+\newpage
+
+\section{Introduction}
+There should always be at least one person (the "maintainer") responsible for the technical maintenance of PYCTS. This document will be a reference for that person - it will include an installation manual and other procedures useful to the maintainer.
+
+This document shall assume that the maintainer is a competent with the Linux command line (specifically, the bash shell).
+
+The author may be reached at platekme89@gmail.com, should the maintainer wish to ask questions.
+
+\section{System Requirements}
+PYCTS requires the following software to operate correctly:
+
+\begin{itemize}
+\item Web space on a Linux server.
+\item A PHP installation on the web server.
+\item A MySQL database.
+\item An authentication server.
+\end{itemize}
+
+PYCTS was written with compatability and maintainability in mind and should not experience any failures in the future due to software upgrades. However, it is not always possible to predict how software will evolve. The following is the "reference" platform on which PYCTS is most likely to operate correctly.
+
+\begin{itemize}
+\item Platform: Any Linux platform is suitable. The author performed all development on a Gentoo system, and PYCTS was first deployed on an Ubuntu web server.
+\item Web server: PYCTS was developed on the lighttpd web server, and the first deployment was made on an Apache web server. Any web server that supports PHP should be suitable.
+\item PHP: Version 5.3.6 was used for development, and older versions should be suitable.
+\item Database server: PYCTS was developed on MySQL 5.1.51, and older versions of MySQL are known to work correctly.
+\item Authentication server: PYCTS supports any authentication server that supports LDAP, though it was tested on Clarkson's Active Diectory server.
+\end{itemize}
+
+Windows platforms are not supported. No effort will be made on the part of the author to make PYCTS compatible with Windows platforms, nor will patches enabling this compatability be accepted. So don't ask!
+
+\newpage
+\section{Installation}
+\subsection{Acquiring the Source Code}
+Installation begins by grabbing the source code for PYCTS. The source code can be pulled from SVN:
+
+{\tt svn co http://svn.cslabs.clarkson.edu/svn/platekme/points2/tags/v\_\softwareversion }
+
+Alternatively, use {\tt sftp} or {\tt scp} to transfer a source tarball to the web server. Put the source code where the web server will see it.
+
+\subsection{Configuring the Database Server}
+You will need a MySQL database server ready for PYCTS to use. Go to the {\tt extras/} directory, where you will find a SQL script named {\tt create\_db.sql} that will be used to create the database schema. Edit lines 1 and {3} in this file to specify the name of the database you wish to use. By default, the script creates a database named "points2".
+
+Log into the database server and enter the command {\tt source create\_db.sql}. This will create the database schema used by PYCTS.
+
+\subsection{Prepare Local Configuration}
+The next step is to set some global variables PYCTS requires to function in the local environment. The file containing these variables is {\tt includes/globals.php}.
+
+\begin{itemize}
+\item{{\tt \$mysql\_user}: set this to be the username used to log into the database server.}
+\item{{\tt \$mysql\_pass}: set this to be the password for the username used to log into the database server.}
+\item{{\tt \$mysql\_server}: set this to the URL of the database server.}
+\item{{\tt \$mysql\_db}: set this to the name of the database ({\tt points2} by default).}
+\item{{\tt \$ad\_server}: set this to the name of the server against which PYCTS will authenticate users. Clarkson uses an Active Directory server at ad.clarkson.edu.}
+\item{{\tt \$use\_ad}: set this to {\tt true} to enable authentication against the AD server. Only set this to {\tt false} for debugging purposes.}
+\item{{\tt \$software\_version}: this is just the version number reported by the software. Don't change it.}
+\item{{\tt \$root\_pw}: PYCTS has a root user that is authenticated locally. This is the password for that user.}
+\end{itemize}
+
+When you have configured the global variables to your satisfaction, PYCTS is almost ready to use.
+
+\subsection{Directory Permissions}
+PYCTS requires write permissions for several internal directories. They are:
+\begin{itemize}
+\item{ {\tt utility/download} }
+\item{ {\tt utility/upload} }
+\item{ {\tt utility/flyers} }
+\item{ {\tt utility/flyers/tmp} }
+\end{itemize}
+
+Use {\tt chmod} to make sure they are writable by the web server, use octal permissions {\tt 0777} if in doubt.
+
+On Clarkson's AFS system, it's necessary to set additional permissions. Use the following commands to do this:
+\begin{verbatim}
+fs sa utility/download web rliwd
+fs sa utility/upload web rliwd
+fs sa utility/flyers web rliwd
+fs sa utility/flyers/tmp web rliwd
+\end{verbatim}
+
+PYCTS is now installed, congratulations! Continue on to the initial login to finish the installation.
+
+\subsection{Initial Login}
+PYCTS is installed, but there are no users! You will have to log in as the root user to add them. Navigate to PYCTS and log in with the username {\tt root} and the password that you set in the {\tt globals.php} file. Navigate to the Admin Panel, and add at least one Professor-level user.
+
+That's it, you're done!
+
+\section{Upgrades and Maintenance}
+PYCTS requires very little in the way of periodic maintenance. You might want to check that no extra files are left over in the writable directories, but PYCTS generally cleans up after itself.
+
+To upgrade PYCTS, simply replace the old source code with new source code. Be sure to verify that the schema hasn't changed between versions, since changes to the schema generally break compatability with old source code. After upgrading, don't forget to reset the permissions on the writable directories, and be sure to copy over all numbered directories in {\tt utility/flyers} to the new installation.
+
+\end{document}
+
+
+

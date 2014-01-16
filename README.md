@@ -1,0 +1,1 @@
+See the doc folder for documentation regarding both system set-up and front end usage.
