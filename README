@@ -1,11 +1,9 @@
 This software is PYCTS, the PY151 Credit Tracking System.
 
-PYCTS was written by Mark Platek, who can be reached at the following e-mail address: platekme89@gmail.com
+PYCTS was written by Mark Platek, and currently maintained by Andrew Lindsay who can be reached at the following e-mail address: lindsaaj@clarkson.edu
 
 PYCTS is Copyright 2011 by Mark Platek.
 
 PYCTS is released under the terms of the GNU GPL version 3. Please see the included file COPYING for the terms of the GPL.
 
-
-
-For documentation, please follow the symlinks in the doc/ directory.
+For documentation, please see the documentation directory
