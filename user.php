@@ -26,12 +26,13 @@ if( !isset($_SESSION) ) {
 require_once( "includes/html_print.php" );
 require_once( "includes/db.php" );
 
+// send user to login if they do not have an active session
 if( !isset($_SESSION['active']) ) {
-	print_system_message("Invalid Session", "You must be logged in to view this page.", "index.php");
+	echo '<meta http-equiv="refresh" content="0; url=index.php">';
 	exit;
 }
 
-/* depending on what GET is set, set up the environment */
+// load requested page based on GET variable
 if( isset($_GET['user_management']) ) {
 	$title = "Administration";
 	$include = "utility/user_management.php";
@@ -52,21 +53,34 @@ else if( isset($_GET['studentdisplay']) ) {
 	$title = "$_GET[studentdisplay]";
 	$include = "utility/studentdisplay.php";
 }
+else if( isset($_GET['studydisplay']) ) {
+	$title = "$_GET[sirb]";
+	$include = "utility/studydisplay.php";
+}
 else if( isset($_GET['system_options']) ) {
 	$title = "$_GET[system_options]";
-	$include = "utility/sysOpts.php";
+	$include = "utility/system_options.php";
+}
+else if( isset($_GET['report']) ) {
+	$title = "Credit Report";
+	$include = "studentindex.php";
 }
 else {
-	$title = "Roster";
-	$include = "utility/display.php";
+	// There are two different default locations based on user type
+	if( $_SESSION['is_student'] ) {
+		$title = "Credit Report";
+		$include = "studentindex.php";
+	}
+	else {
+		$title = "Roster";
+		$include = "utility/display.php";
+	}
 }
 
 
 print_html_head( $title );
 
-print_user_navbar();
-
-include "utility/utility.php";
+print_navbar();
 
 include $include;
 

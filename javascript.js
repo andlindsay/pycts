@@ -21,19 +21,19 @@ PYCTS and this file are Copyright 2011 by Mark Platek.
 /* sets all checkboxes in the roster to the state passed */
 function checkall(state) {
 for(c=3; c < document.forms['roster_select'].length; c++)
-	document.forms['roster_select'].elements[c].checked = state;
+    document.forms['roster_select'].elements[c].checked = state;
 }
 
 /* puts the string "Search" in the search box */
 function prefill() {
-	if( document.getElementById( "searchbox" ).value == "" )
-		document.getElementById( "searchbox" ).value = "Search";
+    if( document.getElementById( "searchbox" ).value == "" )
+        document.getElementById( "searchbox" ).value = "Search";
 }
 
 /* removes the "Search" string from the search box */
 function clearfill() {
-	if( document.getElementById( "searchbox" ).value == "Search" )
-		document.getElementById( "searchbox" ).value = "";
+    if( document.getElementById( "searchbox" ).value == "Search" )
+        document.getElementById( "searchbox" ).value = "";
 }
 
 window.onload = prefill;

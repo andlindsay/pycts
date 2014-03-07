@@ -29,11 +29,11 @@ if( !isset($_SESSION['active']) ) {
 
 $is_repeat_action = check_action_timestamp();
 
-if(  !$is_repeat_action ) {
+if( !$is_repeat_action) {
 	if(isset($_POST['quick_add'])){
 		$message = display_quick_add($_POST['st_id']);
 	}else if( isset($_POST['create']) ){
-                $message = br_create_backup();
+        $message = br_create_backup();
 	}else
 		$message = '';
 
@@ -62,34 +62,34 @@ if( isset($_GET['filter_element']) ) {
 	}
 	else if( $_GET['filter_element'] == 'First Name' ) {
 		foreach( $all_students as $student  ) {
-			if( stristr($student['s_fname'], $_GET['filter']) )
+			if( stristr($student['u_fname'], $_GET['filter']) )
 				$students[] = $student;
 		}
 	}
 	else if( $_GET['filter_element'] == 'Last Name' ) {
 		foreach( $all_students as $student  ) {
-			if( stristr($student['s_lname'], $_GET['filter']) )
+			if( stristr($student['u_lname'], $_GET['filter']) )
 				$students[] = $student;
 		}
 	}
 	else if( $_GET['filter_element'] == 'AD Username' ) {
 		foreach( $all_students as $student  ) {
-			if( stristr($student['s_ad'], $_GET['filter']) )
+			if( stristr($student['u_ad'], $_GET['filter']) )
 				$students[] = $student;
 		}
 	}
 	else if( $_GET['filter_element'] == 'Professor' ) {
 		foreach( $all_students as $student  ) {
-			if( stristr($student['s_prof'], $_GET['filter']) )
+			if( stristr($student['u_prof'], $_GET['filter']) )
 				$students[] = $student;
 		}
 	}
 	else if( $_GET['filter_element'] == 'All Fields' || $_GET['filter_element'] == 'Search by...' ) {
 		foreach( $all_students as $student  ) {
-			if( stristr($student['s_lname'], $_GET['filter']) ||
-				stristr($student['s_fname'], $_GET['filter']) ||
-				stristr($student['s_ad'], $_GET['filter']) ||
-				stristr($student['s_prof'], $_GET['filter'])
+			if( stristr($student['u_lname'], $_GET['filter']) ||
+				stristr($student['u_fname'], $_GET['filter']) ||
+				stristr($student['u_ad'], $_GET['filter']) ||
+				stristr($student['u_prof'], $_GET['filter'])
 			)
 				$students[] = $student;
 		}
@@ -101,6 +101,7 @@ if( isset($_GET['filter_element']) ) {
 else {
 	$students = $all_students;
 }
+
 $num_students_shown = count($students);
 
 if( $num_students_shown == 0 ) {
@@ -111,7 +112,15 @@ if( $num_students_shown == 0 ) {
 }
 
 /* if we need to reorder the list of students, do it now */
+$last_sort = $_GET['sort'];
+
 if( isset($_GET['sort']) ) {
+	// make sure dir is a valid value
+	if( !isset($_GET['dir']) || ($_GET['dir'] != 1 && $_GET['dir'] != -1) )
+		$dir = 1;
+	
+	//$dir
+	
 	if( $_GET['sort'] == 'lname' )
 		usort( $students, 'compare_students_lname' );
 	else if( $_GET['sort'] == 'fname' )
@@ -128,7 +137,15 @@ if( isset($_GET['sort']) ) {
 		usort( $students, 'compare_students_credits_b2' );
 	else if( $_GET['sort'] == 'credits_b3' )
 		usort( $students, 'compare_students_credits_b3' );
+		
+	if( $_GET['dir'] == 1)
+		$dir = -1;
+	else
+		$dir = 1;
+	
 }
+else
+	$dir = -1;
 
 $studies = get_studies();
 
@@ -222,30 +239,22 @@ echo <<<EOF
 Showing $num_students_shown/$tot_students students.
 </p>
 
-
-
 </div> <!-- closing div "display_quickadd" -->
-EOF;
 
-if( isset( $_GET['filter_element'] ) ) {
-	$extraget = "&amp;filter_element=$_GET[filter_element]&amp;filter=$_GET[filter]";
-}
-else {
-	$extraget = '';
-}
-
-echo <<<EOF
 <div id="display_roster">
 <table border="1">
 <tr>
-	<th><a href="user.php?sort=lname$extraget">Last Name</a></th>
-	<th><a href="user.php?sort=fname$extraget">First Name</a></th>
-	<th><a href="user.php?sort=ad$extraget">AD Username</a></th>
-	<th><a href="user.php?sort=prof$extraget">Professor</a></th>
-	<th><a href="user.php?sort=credits$extraget">Total</a></th>
-	<th><a href="user.php?sort=credits$extraget">Block 1</a></th>
-	<th><a href="user.php?sort=credits$extraget">Block 2</a></th>
-	<th><a href="user.php?sort=credits$extraget">Block 3</a></th>
+EOF;
+	echo '<th><a href="user.php?sort=lname&dir='.$dir.'">Last Name</a></th>';
+	echo '<th><a href="user.php?sort=fname&dir='.$dir.'">First Name</a></th>';
+	echo '<th><a href="user.php?sort=ad&dir='.$dir.'">AD Username</a></th>';
+	echo '<th><a href="user.php?sort=prof&dir='.$dir.'">Professor</a></th>';
+	echo '<th><a href="user.php?sort=credits&dir='.$dir.'">Total</a></th>';
+	echo '<th><a href="user.php?sort=credits_b1&dir='.$dir.'">Block 1</a></th>';
+	echo '<th><a href="user.php?sort=credits_b2&dir='.$dir.'">Block 2</a></th>';
+	echo '<th><a href="user.php?sort=credits_b3&dir='.$dir.'">Block 3</a></th>';
+	
+echo <<<EOF
 	<th>
 		Select<br/>
 		<input type="button" value="All" onclick="checkall(true)"/>
@@ -264,18 +273,18 @@ foreach( $students as $student ) {
 
 echo <<<EOF
 
-	<td><a href="user.php?studentdisplay=$student[s_ad]">$student[s_lname]</a></td>
-	<td>$student[s_fname]</td>
-	<td>$student[s_ad]</td>
-	<td>$student[s_prof]</td>
+	<td><a href="user.php?studentdisplay=$student[u_ad]">$student[u_lname]</a></td>
+	<td>$student[u_fname]</td>
+	<td>$student[u_ad]</td>
+	<td>$student[u_prof]</td>
 
-	<td class="center">$student[s_credits]</td>
-	<td class="center">$student[s_credits_b1]</td>
-	<td class="center">$student[s_credits_b2]</td>
-	<td class="center">$student[s_credits_b3]</td>
+	<td class="center">$student[u_credits]</td>
+	<td class="center">$student[u_credits_b1]</td>
+	<td class="center">$student[u_credits_b2]</td>
+	<td class="center">$student[u_credits_b3]</td>
 EOF;
 
-	echo '<td class="center"><input type="checkbox" name="' . $student['s_ad'] . '" value="' . $student['s_ad'] . '"/></td>';
+	echo '<td class="center"><input type="checkbox" name="' . $student['u_ad'] . '" value="' . $student['u_ad'] . '"/></td>';
 	echo '</tr>';
 }
 
@@ -317,28 +326,28 @@ function display_quick_add($st_id) {
 
 /* these are used for sorting students */
 function compare_students_lname( $a, $b ) {
-	return strnatcmp( $a['s_lname'], $b['s_lname'] );
+	return $_GET['dir'] * strnatcmp( $a['u_lname'], $b['u_lname'] );
 }
 function compare_students_fname( $a, $b ) {
-	return strnatcmp( $a['s_fname'], $b['s_fname'] );
+	return $_GET['dir'] * strnatcmp( $a['u_fname'], $b['u_fname'] );
 }
 function compare_students_ad( $a, $b ) {
-	return strnatcmp( $a['s_ad'], $b['s_ad'] );
+	return $_GET['dir'] * strnatcmp( $a['u_ad'], $b['u_ad'] );
 }
 function compare_students_prof( $a, $b ) {
-	return strnatcmp( $a['s_prof'], $b['s_prof'] );
+	return $_GET['dir'] * strnatcmp( $a['u_prof'], $b['u_prof'] );
 }
 function compare_students_credits( $a, $b ) {
-	return ( -1 * strnatcmp( $a['s_credits'], $b['s_credits'] ) );
+	return $_GET['dir'] * strnatcmp( $a['u_credits'], $b['u_credits'] ) ;
 }
 function compare_students_credits_b1( $a, $b ) {
-	return ( -1 * strnatcmp( $a['s_credits_b1'], $b['s_credits_b1'] ) );
+	return $_GET['dir'] * strnatcmp( $a['u_credits_b1'], $b['u_credits_b1'] );
 }
 function compare_students_credits_b2( $a, $b ) {
-	return ( -1 * strnatcmp( $a['s_credits_b2'], $b['s_credits_b2'] ) );
+	return $_GET['dir'] * strnatcmp( $a['u_credits_b2'], $b['u_credits_b2'] );
 }
 function compare_students_credits_b3( $a, $b ) {
-	return ( -1 * strnatcmp( $a['s_credits_b3'], $b['s_credits_b3'] ) );
+	return $_GET['dir'] * strnatcmp( $a['u_credits_b3'], $b['u_credits_b3'] );
 }
 
 ?>

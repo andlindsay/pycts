@@ -31,26 +31,11 @@ echo <<<EOF
 <head>
 	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
 	<link rel="shortcut icon" href="favicon.ico"/>
-EOF;
 
-	if( isset($_SESSION) ) {
-		if( isset($_SESSION['is_student']) ) {
-			echo '<link rel="stylesheet" type="text/css" href="style.css"/>';
-		}
-		else if( isset($_SESSION['role']) ) {
-			echo '<link rel="stylesheet" type="text/css" href="userstyle.css"/>';
-			echo '<script type="text/javascript" src="javascript.js"></script>';
-		}
-		else {
-			echo '<link rel="stylesheet" type="text/css" href="style.css"/>';
-		}
-	}
-	else {
-		echo '<link rel="stylesheet" type="text/css" href="style.css"/>';
-	}
-
-echo <<<EOF
+	<link rel="stylesheet" type="text/css" href="style.css"/>
 	<title>PYCTS: $title</title>
+
+	<script type="text/javascript" src="javascript.js"></script>
 
 	<!-- This is PYCTS: the PY151 Credit Tracking System -->
 	<!-- PYCTS is free software, released under the terms of the GPLv3 -->
@@ -62,62 +47,59 @@ EOF;
 
 }
 
-function print_html_tail() {
-
+function print_html_tail() 
+{
+// need to close an extra div if student or not logged in due to page structure
+if(!$_SESSION || $_SESSION['is_student'] )
+	echo '</div>';
 echo <<<EOF
 
-</body>
+	</body>
 </html>
 EOF;
 
 }
 
-function print_navbar() {
-
+function print_navbar() 
+{
+// page structure is slighty different for login and student
+if(!$_SESSION || $_SESSION['is_student'] )
+	echo '<div id="login" align="center">';
 echo <<<EOF
-<div id="student_navbar">
-
-<ul>
-	<li><a class="img" href="index.php"><img src="logo.png" alt="Logo"/></a></li>
-</ul>
-
-</div>
+<div id="navbar">
+	<ul>
+		<li><a class="img" href="index.php"><img src="logo.png" alt="Logo"/></a></li>
 EOF;
+if($_SESSION)
+	echo'<li id="logout"><a href="index.php?logout">Log Out</a></li>';
+echo <<<EOF
+	</ul>
+	<br>
+EOF;
+// This include prints the actual navigation tabs
+if($_SESSION)
+	include("utility/utility.php");
+echo '</div>';
 
 }
 
-function print_user_navbar() {
-
-echo<<<EOF
-<div id="user_navbar">
-
-<ul>
-	<li><a class="img" href="user.php"><img src="logo.png" alt="Logo"/></a></li>
-	<li><span id="greeting">$_SESSION[salutation], $_SESSION[fname].</span></li>
-	<li id="logout"><a href="index.php?logout">Log Out</a></li>
-</ul>
-
-</div>
-EOF;
-
-}
-
-function print_system_message( $title, $msg, $target ) {
-	print_html_head($title);
-	print_navbar();
+function print_system_message( $title, $msg, $target ) 
+{
 	echo "<p class=\"system_message\">$msg</p>";
 	echo "<p class=\"system_message\"><a class=\"system_message\" href=\"$target\">Return</a></p>";
 	print_html_tail();
 }
 
-function print_user_system_message( $msg, $target ) {
+function print_user_system_message( $msg, $target ) 
+{
 	echo "<p class=\"system_message\">$msg</p>";
 	echo "<p class=\"system_message\"><a class=\"system_message\" href=\"$target\">Return</a></p>";
 	print_html_tail();
 	exit();
 }
 
-function print_student_timestamp() {
+function print_student_timestamp() 
+{
 	date_default_timezone_set('America/New_York');
 	$date = date("F jS, Y");
 	$time = date("g:i:s A");
@@ -125,7 +107,8 @@ function print_student_timestamp() {
 	echo "PYCTS version: " . $GLOBALS['software_version'] . "</p>";
 }
 
-function print_action_result($message) {
+function print_action_result($message) 
+{
 	/* If the message begins with "ERROR:", then the last action has failed */
 	if( !empty($message) ) {
 		if( strncmp($message, "ERROR:", 6) == 0 ) {
@@ -140,7 +123,8 @@ function print_action_result($message) {
 	}
 }
 
-function debug_print( $array ) {
+function debug_print( $array ) 
+{
 	echo '<pre>';
 	print_r( $array );
 	echo '</pre>';

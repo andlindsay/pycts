@@ -23,27 +23,72 @@ PYCTS and this file are Copyright 2011 by Mark Platek.
 	padding: 0;
 }
 
+table {
+	margin: 15px;
+}
+
+table, th, td {
+	border-spacing: 0px;
+	border: 1px solid black;
+	border-collapse:collapse;
+	text-align: center;
+}
+
+th {
+	background-color: #FFF;
+	padding-left: 2em;
+	padding-right: 2em;
+}
+
+td {
+	padding: .25em 0 .25em 0;
+}
+
 body {
 	font-family: dejavu sans, arial, helvetica, sans-serif;
 	background-color: white;
 	color: black;
-	width: 60%;
 	min-width: 700px;
 	margin-left: auto;
 	margin-right: auto;
+}
+
+tr:nth-child(even) {
+    background-color: #eee;
+}
+tr:nth-child(odd) {
+    background-color: #ddd;
+}
+
+span.input_explanation {
+	font-size: smaller;
+	font-style: italic;
 }
 
 a {
 	outline: none;
 }
 
+#action_result {
+	background-color: #5f5;
+	padding-left: 1em;
+	padding-top: .25em;
+	padding-bottom: .25em;
+}
+
+#action_result_fail {
+	background-color: #f55;
+	padding-left: 1em;
+	padding-top: .25em;
+	padding-bottom: .25em;
+}
 /* ------------------------------------------------------------------------- */
 /* main page */
 /* ------------------------------------------------------------------------- */
 #front_page {
 	margin-left: auto;
 	margin-right: auto;
-	text-align: justify;
+	text-align: center;
 	line-height: 1.5;
 }
 
@@ -71,52 +116,195 @@ a {
 /* system error messages */
 /* ------------------------------------------------------------------------- */
 p.system_message {
-	margin: 1em 0em 1em 0em;
+	margin: 0em 0em 0em 0em;
 }
 
 a.system_message {
 	color: blue;
 }
+/* ------------------------------------------------------------------------- */
+/* all section divs */
+/* ------------------------------------------------------------------------- */
+.section {
+	margin: 1em;
+	padding-bottom: 1em;
+	border-bottom: 1px solid black;
+}
+
+.section h2 {
+	padding-bottom: .2em;
+	font-size: larger;
+}
+
+.section p {
+	padding-top: .2em;
+	padding-bottom: .2em;
+}
+
+.section input.text {
+	width: 23em;
+}
+
+.section table {
+	border-collapse: collapse;
+}
+
+.section th {
+	text-align: center;
+	padding: .6em;
+}
+
+.section td {
+	padding: .2em;
+}
+
+.section td.credit_removed {
+	font-size: smaller;
+	text-decoration: line-through;
+	padding: .1em;
+}
+
+.section dt {
+	float: left;
+	padding-right: 1em;
+	min-width: 9em;
+}
+
+.section ul {
+	list-style-position: inside;
+	margin-top: .5em;
+	margin-bottom: .5em;
+}
 
 /* ------------------------------------------------------------------------- */
-/* student navigation bar */
+/* display and sub-divs */
 /* ------------------------------------------------------------------------- */
-#student_navbar {
-	margin: 0;
+#display {
+}
+
+#display p.message {
+	margin: 1em;
+	font-style: italic;
+}
+
+#display a.message {
+	font-style: normal;
+	color: blue;
+}
+
+#display_quickadd {
+	padding: 1em;
+	border-bottom: 1px solid black;
+}
+
+#display_quickadd dl {
+	margin: .4em 0em .4em 0em;
+}
+
+#display_quickadd dt {
+	float: left;
+	padding-right: .5em;
+	width: 6em;
+}
+
+#display_quickadd p#student_count {
+	margin: 1em 0em 0em 0em;
+	font-weight: bold;
+}
+
+#display_quickadd input.text {
+	width: 30em;
+}
+
+#roster {
+	margin: 1em;
+}
+
+#roster table {
+	border-collapse: collapse;
+
+}
+
+#roster thead{
+	display:block;
+}
+
+#roster tbody{
+	height:250%;
+	overflow-y:scroll;
+	display:block;
+}
+
+#roster th {
+	padding: .2em 2em;
+	min-width:5em;
+	text-align: center;
+	width:100px;
+}
+
+
+/* #roster td {
+	padding: .2em 2em;
+	border: 1px solid black;
+	text-align: left;
+	width:100px;
+} */
+
+#roster td.center {
+	text-align: center;
+}
+
+#roster th a {
+	color: blue;
+}
+#roster_content td {
+	min-width:5em;
+} 
+/* ------------------------------------------------------------------------- */
+/* navigation bar */
+/* ------------------------------------------------------------------------- */
+#navbar {
+	margin-top: 0;
 	min-height: 68px;	/* the logo image is 48 pixels high and has 10px of top and bottom padding */
 	background-color: #024001;
 }
 
-#student_navbar li {
+#navbar li {
 	list-style-type: none;
 	display: block;
 	float: left;
-	padding: 10px 1em 0 10px;;
+	padding: 10px 1em 0 10px;
 }
 
-#student_navbar li#logout {
+#navbar li#logout {
 	float: right;
 }
 
-#student_navbar img {
+#navbar img {
 	border: none;
 }
 
-#student_navbar a {
+#navbar a {
 	color: white;
 	text-decoration: none;
 	padding: 3px;
 }
 
-#student_navbar a:hover {
+#navbar a:hover {
 	background-color: #333;
 	color: black;
 	background-color: white;
 }
 
-#student_navbar a.img:hover {
+#navbar a.img:hover {
 	background-color: #024001;
 }
+
+#navbar span#greeting {
+	color: white;
+	font-size: 1.2em;
+}
+
 
 /* ------------------------------------------------------------------------- */
 /* student content */
@@ -126,14 +314,16 @@ a.system_message {
 	line-height: 1.5;
 }
 
-#student_content h1 {
-	margin: 1em 0em 1em 0em;
+#student_content {
+	padding-top: 2em;
 }
 
 #student_content table {
 	border-collapse: collapse;
 	text-align: center;
-	width: 100%;
+	margin-left: auto;
+	margin-right: auto;
+	width: 90%;
 }
 
 #student_content p {
@@ -147,8 +337,6 @@ a.system_message {
 
 #student_content th, td {
 	margin: 0px;
-	border: 1px solid black;
-	padding: .5em;
 }
 
 #student_content th {
@@ -165,4 +353,64 @@ p#timestamp {
 	width: 80%;
 	margin-left: auto;
 	margin-right: auto;
+}
+
+/* ------------------------------------------------------------------------- */
+/* utility div */
+/* ------------------------------------------------------------------------- */
+#utility {
+        background-color: #024001;
+        color: white;
+        line-height: normal;
+        margin-top: 0px;
+		padding-top:20px;
+}
+
+#utility ul {
+        margin-left: .1em;
+}
+
+#utility li {
+        list-style-type: none;
+        display: inline; 
+        padding: 6px 0px 5px 0px;
+}
+
+#utility li.search {
+	padding: 0;
+	float: right;
+	margin-right: 1em;
+}
+
+#utility a {
+        text-decoration: none;
+        padding-top: 5px;
+        padding-bottom: 5px;
+        color: white;
+        padding-left: .5em;
+        padding-right: .5em;
+        margin-right: .2em;
+}
+
+#utility a.selected {
+        background-color: white;
+        color: black;
+}
+
+#utility a:hover {
+        background-color: white;
+        color: black;
+}
+
+#login {
+	width: 1152px;
+	margin: 0 auto;
+}
+
+dl {
+	line-height: 1.5em;
+}
+
+h1, h2 {
+	display: inline;
 }

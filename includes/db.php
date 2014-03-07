@@ -75,11 +75,11 @@ function open_connection() {
 function query_users($username) {
 	$conn = open_connection();
 	if( empty($username) ) {
-		$query = "select * from users order by u_lname asc";
+		$query = "select * from users where u_role != 2 order by u_lname asc";
 	}
 	else {
 		$username_san = mysql_real_escape_string($username, $conn);
-		$query = "select * from users where u_ad = '$username_san'";
+		$query = "select * from users where u_ad = '$username_san' and u_role != 2";
 	}
 	$result = mysql_query($query, $conn);
 	mysql_close($conn);
@@ -122,11 +122,11 @@ function query_users($username) {
 function query_students($ad) {
 	$conn = open_connection();
 	if( empty($ad) ) {
-		$query = "select * from students";
+		$query = "select * from users where u_role = 2";
 	}
 	else {
 		$ad_san = mysql_real_escape_string($ad, $conn);
-		$query = "select * from students where s_ad = '$ad_san'";
+		$query = "select * from users where u_ad = '$ad_san' and u_role = 2";
 	}
 	$result = mysql_query($query, $conn);
 	mysql_close($conn);
@@ -134,23 +134,39 @@ function query_students($ad) {
 		$return = array();
 		$num_students = mysql_num_rows($result);
 		for($i=0; $i<$num_students; $i++) {
-			$s_lname = mysql_result($result, $i, "s_lname");
-			$s_fname = mysql_result($result, $i, "s_fname");
-			$s_prof = mysql_result($result, $i, "s_prof");
-			$s_ad = mysql_result($result, $i, "s_ad");
-			$return[] = array('lname' => $s_lname, 'fname' => $s_fname, 'prof' => $s_prof, 'ad' => $s_ad);
+			$u_lname = mysql_result($result, $i, "u_lname");
+			$u_fname = mysql_result($result, $i, "u_fname");
+			$u_prof = mysql_result($result, $i, "u_prof");
+			$u_ad = mysql_result($result, $i, "u_ad");
+			$return[] = array('lname' => $u_lname, 'fname' => $u_fname, 'prof' => $u_prof, 'ad' => $u_ad);
 		}
 		return $return;
 	}
 	else {
 		if( mysql_num_rows($result) != 1 )
 			return "";
-		$s_lname = mysql_result($result, 0, "s_lname");
-		$s_fname = mysql_result($result, 0, "s_fname");
-		$s_prof = mysql_result($result, 0, "s_prof");
-		$s_ad = mysql_result($result, 0, "s_ad");
-		return array('lname' => $s_lname, 'fname' => $s_fname, 'prof' => $s_prof, 'ad' => $s_ad);
+		$u_lname = mysql_result($result, 0, "u_lname");
+		$u_fname = mysql_result($result, 0, "u_fname");
+		$u_prof = mysql_result($result, 0, "u_prof");
+		$u_ad = mysql_result($result, 0, "u_ad");
+		return array('lname' => $u_lname, 'fname' => $u_fname, 'prof' => $u_prof, 'ad' => $u_ad);
 	}
+}
+
+function refck_studies_credits($st_id) {
+        $conn = open_connection();
+        $query = "select * from points;";
+        $result = mysql_query($query);
+        mysql_close($conn);
+        $numrows = mysql_num_rows($result);
+        $ref_ok = true;
+        for( $i=0; $i < $numrows; $i++ ) {
+                if( mysql_result($result, $i, "st_id") == $st_id )
+                        $ref_ok = false;
+        }
+        if( $ref_ok )
+                return $st_id;
+        return -1;
 }
 
 function query_student_fname($ad) {
@@ -160,12 +176,12 @@ function query_student_fname($ad) {
 	}
 	else {
 		$ad_san = mysql_real_escape_string($ad, $conn);
-		$query = "select * from students where s_ad = '$ad_san'";
+		$query = "select * from students where u_ad = '$ad_san'";
 	}
 	$result = mysql_query($query, $conn);
 	mysql_close($conn);
-	$s_fname = mysql_result($result, $i, "s_fname");
-	return $s_fname;
+	$u_fname = mysql_result($result, $i, "u_fname");
+	return $u_fname;
 
 }
 
@@ -176,12 +192,12 @@ function query_student_lname($ad) {
 	}
 	else {
 		$ad_san = mysql_real_escape_string($ad, $conn);
-		$query = "select * from students where s_ad = '$ad_san'";
+		$query = "select * from users where u_ad = '$ad_san'";
 	}
 	$result = mysql_query($query, $conn);
 	mysql_close($conn);
-	$s_lname = mysql_result($result, $i, "s_lname");
-	return $s_lname;
+	$u_lname = mysql_result($result, $i, "u_lname");
+	return $u_lname;
 }
 
 
@@ -196,9 +212,13 @@ function query_credits($studentad, $get_removed) {
 	$conn = open_connection();
 	$studentad_san = mysql_real_escape_string($studentad, $conn);
 	if( $get_removed == false )
-		$query = "select p_id, s_ad, u_amount, st_id, u_add_ad, u_rem_ad, from_unixtime(time_add) as time_add, block_num, from_unixtime(time_rem) as time_rem, desc_add, desc_rem from points where s_ad = '$studentad_san' order by time_add desc";
+		$query = "select p_id, u_ad, u_amount, st_id, u_add_ad, u_rem_ad, from_unixtime(time_add) as time_add, block_num, 
+			from_unixtime(time_rem) as time_rem, desc_add, desc_rem from points where u_ad = '$studentad_san' order by 
+			time_add desc";
 	else
-		$query = "select p_id, s_ad, u_amount, st_id, u_add_ad, u_rem_ad, from_unixtime(time_add) as time_add, block_num, from_unixtime(time_rem) as time_rem, desc_add, desc_rem from points where s_ad = '$studentad_san' order by time_rem desc";
+		$query = "select p_id, u_ad, u_amount, st_id, u_add_ad, u_rem_ad, from_unixtime(time_add) as time_add, block_num, 
+			from_unixtime(time_rem) as time_rem, desc_add, desc_rem from points where u_ad = '$studentad_san' order by 
+			time_rem desc";
 	$result = mysql_query($query, $conn);
 	mysql_close($conn);
 	$num_points = mysql_num_rows($result);
@@ -213,7 +233,7 @@ function query_credits($studentad, $get_removed) {
 		else if( $get_removed == true && $u_rem_ad == '' )
 			continue;
 		$p_id = mysql_result($result, $i, "p_id");
-		$s_ad = mysql_result($result, $i, "s_ad");
+		$u_ad = mysql_result($result, $i, "u_ad");
 		$st_id = mysql_result($result, $i, "st_id");
 		$u_amount = mysql_result($result, $i, "u_amount");
 		$u_add_ad = mysql_result($result, $i, "u_add_ad");
@@ -222,36 +242,12 @@ function query_credits($studentad, $get_removed) {
 		$time_rem = mysql_result($result, $i, "time_rem");
 		$desc_add = mysql_result($result, $i, "desc_add");
 		$desc_rem = mysql_result($result, $i, "desc_rem");
-		$values = array('p_id' => $p_id, 's_ad' => $s_ad, 'st_id' => $st_id, 'u_amount' => $u_amount, 'u_add' => $u_add_ad, 'u_rem' => $u_rem_ad, 'time_add' => $time_add, 'block_num' => $block_num, 'time_rem' => $time_rem, 'desc_add' => $desc_add, 'desc_rem' => $desc_rem);
+		$values = array('p_id' => $p_id, 'u_ad' => $u_ad, 'st_id' => $st_id, 'u_amount' => $u_amount, 'u_add' => $u_add_ad, 
+			'u_rem' => $u_rem_ad, 'time_add' => $time_add, 'block_num' => $block_num, 'time_rem' => $time_rem, 
+			'desc_add' => $desc_add, 'desc_rem' => $desc_rem);
 		$return[] = $values;
 	}
 	return $return;
-}
-
-/*
-	checks the referential integrity of a single study
-	if the passed st_id value appears in the points table, then that study can't be removed without disrupting the data set
-
-	args:
-		an st_id
-	
-	returns:
-		the st_id if the study is not referenced, -1 otherwise
-*/
-function refck_studies_credits($st_id) {
-	$conn = open_connection();
-	$query = "select * from points;";
-	$result = mysql_query($query);
-	mysql_close($conn);
-	$numrows = mysql_num_rows($result);
-	$ref_ok = true;
-	for( $i=0; $i < $numrows; $i++ ) {
-		if( mysql_result($result, $i, "st_id") == $st_id )
-			$ref_ok = false;
-	}
-	if( $ref_ok )
-		return $st_id;
-	return -1;
 }
 
 /*
@@ -268,13 +264,13 @@ function get_totals() {
 	$c_count = mysql_result($result, 0, "u_amount");
 	if(is_null($c_count))
 		$c_count =0;
-	$query = "select count(s_ad) as s_ads from students;";
+	$query = "select count(u_ad) as u_ads from users where u_role = 2;";
 	$result = mysql_query($query, $conn);
-	$s_count = mysql_result($result, 0, "s_ads");
-	if(is_null($s_count))
-                $s_count =0;
+	$u_count = mysql_result($result, 0, "u_ads");
+	if(is_null($u_count))
+                $u_count =0;
 	mysql_close($conn);
-	return array('credits' => $c_count, 'students' => $s_count);
+	return array('credits' => $c_count, 'students' => $u_count);
 }
 
 /*
@@ -285,65 +281,65 @@ function get_totals() {
 	returns: associative array of all entries in the points table
 */
 function get_all_students_credits($sort_name) {
-	$sort = "s_lname";			/* by default sort by last name if something is wonky */
+	$sort = "u_lname";			/* by default sort by last name if something is wonky */
 	if( $sort_name == "Last Name" )
-		$sort = "s_lname";
+		$sort = "u_lname";
 	else if( $sort_name == "First Name" )
-		$sort = "s_fname";
+		$sort = "u_fname";
 	else if( $sort_name == "AD Username" )
-		$sort = "s_ad";
+		$sort = "u_ad";
 	else if( $sort_name == "Professor" )
-		$sort = "s_prof";
+		$sort = "u_prof";
 	$conn = open_connection();
-	$query = "select s_ad, s_lname, s_fname, s_prof from students order by $sort asc;";
+	$query = "select u_ad, u_lname, u_fname, u_prof from users where u_role = 2 order by $sort asc;";
 	$result = mysql_query($query, $conn);
 	$students = array();
 	$num_rows = mysql_num_rows($result);
 	if( $num_rows == 0 )
 		return $students;
 	for($i=0; $i<$num_rows; $i++) {
-		$s_lname = mysql_result($result, $i, "s_lname");
-		$s_fname = mysql_result($result, $i, "s_fname");
-		$s_ad = mysql_result($result, $i, "s_ad");
-		$s_prof = mysql_result($result, $i, "s_prof");
+		$u_lname = mysql_result($result, $i, "u_lname");
+		$u_fname = mysql_result($result, $i, "u_fname");
+		$u_ad = mysql_result($result, $i, "u_ad");
+		$u_prof = mysql_result($result, $i, "u_prof");
 
-		$query = "select * from points where s_ad = '$s_ad' and u_rem_ad is null";
+		$query = "select * from points where u_ad = '$u_ad' and u_rem_ad is null";
 		$result_points = mysql_query($query, $conn);
 		/*while($row = mysql_fetch_array($result_points)){
 			echo $row['u_amount']. ' - '. $row['u_ad'];
 			echo "<br />";
 		}*/
 		
-		$query = "select sum(u_amount) as s_points from points where s_ad = '$s_ad' and u_rem_ad is null";
+		$query = "select sum(u_amount) as u_points from points where u_ad = '$u_ad' and u_rem_ad is null";
 		$result_points = mysql_query($query, $conn);
-		$s_points = mysql_result($result_points, 0, "s_points");
+		$u_points = mysql_result($result_points, 0, "u_points");
 
-		$query = "select sum(u_amount) as s_points from points where s_ad = '$s_ad' and u_rem_ad is null and
+		$query = "select sum(u_amount) as u_points from points where u_ad = '$u_ad' and u_rem_ad is null and
 			block_num = '1'";
 		$result_points = mysql_query($query, $conn);
-		$s_points_b1 = mysql_result($result_points, 0, "s_points");
+		$u_points_b1 = mysql_result($result_points, 0, "u_points");
 		
-		$query = "select sum(u_amount) as s_points from points where s_ad = '$s_ad' and u_rem_ad is null and 
+		$query = "select sum(u_amount) as u_points from points where u_ad = '$u_ad' and u_rem_ad is null and 
 			block_num = 2";
 		$result_points = mysql_query($query, $conn);
-		$s_points_b2 = mysql_result($result_points, 0, "s_points");
+		$u_points_b2 = mysql_result($result_points, 0, "u_points");
 		
-		$query = "select sum(u_amount) as s_points from points where s_ad = '$s_ad' and u_rem_ad is null and 
+		$query = "select sum(u_amount) as u_points from points where u_ad = '$u_ad' and u_rem_ad is null and 
 			block_num = 3";
 		$result_points = mysql_query($query, $conn);
-		$s_points_b3 = mysql_result($result_points, 0, "s_points");
+		$u_points_b3 = mysql_result($result_points, 0, "u_points");
 		
-		if( empty($s_points) )
-		        $s_points = 0;
-		if( empty($s_points_b1) )
-		        $s_points_b1 = 0;
-		if( empty($s_points_b2) )
-		        $s_points_b2 = 0;
-		if( empty($s_points_b3) )
-		        $s_points_b3 = 0;
+		if( empty($u_points) )
+		        $u_points = 0;
+		if( empty($u_points_b1) )
+		        $u_points_b1 = 0;
+		if( empty($u_points_b2) )
+		        $u_points_b2 = 0;
+		if( empty($u_points_b3) )
+		        $u_points_b3 = 0;
 
-		$push = array('s_lname' => $s_lname, 's_fname' => $s_fname, 's_ad' => $s_ad, 's_prof' => $s_prof, 's_all_credits' => $result_points,
-			's_credits' => $s_points, 's_credits_b1' => $s_points_b1, 's_credits_b2' => $s_points_b2, 's_credits_b3' => $s_points_b3);
+		$push = array('u_lname' => $u_lname, 'u_fname' => $u_fname, 'u_ad' => $u_ad, 'u_prof' => $u_prof, 'u_all_credits' => $result_points,
+			'u_credits' => $u_points, 'u_credits_b1' => $u_points_b1, 'u_credits_b2' => $u_points_b2, 'u_credits_b3' => $u_points_b3);
 		$students[] = $push;
 	}
 	mysql_close($conn);
@@ -367,7 +363,7 @@ function insert_student($lname, $fname, $ad, $prof) {
 		return false; 
 	}
 	
-	$query = "insert into students (s_lname, s_fname, s_ad, s_prof) values ('$student_lname_san', '$student_fname_san', '$student_ad_san', '$student_prof_san');";
+	$query = "insert into users (u_lname, u_role, u_fname, u_ad, u_prof) values ('$student_lname_san', '2', '$student_fname_san', '$student_ad_san', '$student_prof_san');";
 	if( $student_ad_san == 'root' )
 		$result = false;
 	else
@@ -387,7 +383,7 @@ function insert_students($students) {
 	$conn = open_connection();
 	$return = array();
 	foreach( $students as $student) {
-		$query = "select s_ad from students where s_ad = '$student[ad]';";
+		$query = "select u_ad from users where u_ad = '$student[ad]';";
 		$result = mysql_query($query, $conn);
 		if( mysql_num_rows($result) == 0 ) {
 			// there isn't a student with that AD name in the database, add it to the database
@@ -395,7 +391,7 @@ function insert_students($students) {
 			$student_fname_san = mysql_real_escape_string($student['fname'], $conn);
 			$student_ad_san = mysql_real_escape_string($student['ad'], $conn);
 			$student_prof_san = mysql_real_escape_string($student['prof'], $conn);
-			$query = "insert into students ( s_ad, s_lname, s_fname, s_prof ) values ( '$student_ad_san', '$student_lname_san', '$student_fname_san', '$student_prof_san' );";
+			$query = "insert into students ( u_ad, u_role, u_lname, u_fname, u_prof ) values ( '$student_ad_san', '2', '$student_lname_san', '$student_fname_san', '$student_prof_san' );";
 			if( $student_ad_san == 'root' )
 				$return[] = array('ad' => $student['ad'], 'code' => 'root');
 			else {
@@ -436,17 +432,17 @@ function insert_credits($ads, $num_credits, $st_id, $desc_add, $u_add, $block_nu
 	require "includes/globals.php";
 	$conn = open_connection();
 	$return = true;
-	foreach( $ads as $s_ad ) {
-		$s_ad_san = mysql_real_escape_string($s_ad, $conn);
+	foreach( $ads as $u_ad ) {
+		$u_ad_san = mysql_real_escape_string($u_ad, $conn);
 		$st_id_san = mysql_real_escape_string($st_id, $conn);
 		$u_add_san = mysql_real_escape_string($u_add, $conn);
-		$num_credits_san = mysql_real_escape_string($num_credits, $conn);
+		$num_creditu_san = mysql_real_escape_string($num_credits, $conn);
 		$desc_add_san = mysql_real_escape_string($desc_add, $conn);
 		$timestamp_san = mysql_real_escape_string( time(), $conn);
 
 		$block_num = mysql_real_escape_string($block_num, $conn);
 			
-		$query = "insert into points (s_ad, u_amount, st_id, u_add_ad, time_add, block_num, desc_add) values ('$s_ad_san', '$num_credits_san', '$st_id_san', '$u_add_san', '$timestamp_san', '$block_num', '$desc_add_san');";
+		$query = "insert into points (u_ad, u_amount, st_id, u_add_ad, time_add, block_num, desc_add) values ('$u_ad_san', '$num_creditu_san', '$st_id_san', '$u_add_san', '$timestamp_san', '$block_num', '$desc_add_san');";
 
 		$result = mysql_query($query, $conn);
 		if( !$result ) {
@@ -509,19 +505,8 @@ function insert_user($lname, $fname, $ad, $role) {
 	$new_lname_san = mysql_real_escape_string($lname, $conn);
 	$new_fname_san = mysql_real_escape_string($fname, $conn);
 
-	//TODO: look into searching for user:
-	/*$ad_conn = ldap_connect($ad_server);
-	$sr = ldap_search($ds, $dn, $filter);
-	$info = ldap_count_entries($ds, $sr);
-	if ($info !=1)
-		return false;*/
-
-	//$query = "select u_ad from students where u_ad = '$student_ad_san';";
-	//$result = mysql_query( $query, $conn );
-	//if( count($result) != 0 )
-	//	return false;
-
-	$query = "insert into users (u_ad, u_role, u_lname, u_fname) values ('$new_ad_san', $new_role_san, '$new_lname_san', '$new_fname_san')";
+	$query = "insert into users (u_ad, u_role, u_lname, u_fname) values 
+		('$new_ad_san', $new_role_san, '$new_lname_san', '$new_fname_san')";
 	if( $new_ad_san == 'root' )
 		$result = false;
 	else 
@@ -535,7 +520,7 @@ function insert_user($lname, $fname, $ad, $role) {
 */
 function wipedb() {
 	$conn = open_connection();
-	$squery = "delete from students;";
+	$squery = "delete from users where u_role = 2;";
 	$pquery = "delete from points;";
 	$presult = mysql_query($pquery, $conn);
 	$sresult = mysql_query($squery, $conn);
@@ -545,6 +530,39 @@ function wipedb() {
 	return true;
 }
 
+function get_study_info($st_id) {
+	$conn = open_connection();
+	$st_id_san  = mysql_real_escape_string($st_id, $conn);
+	$query = "select st_irb, st_desc, st_credits from studies where st_id = '$st_id_san'";
+	$result = mysql_query($query, $conn);
+	$st_irb = mysql_result($result, 0, "st_irb");
+	$st_desc = mysql_result($result, 0, "st_desc");
+	$st_credits = mysql_result($result, 0, "st_credits");
+	return array('st_irb' => $st_irb, 'st_desc' => $st_desc, 'st_credits' => $st_credits);
+}
+
+function query_study_users($st_id) {
+	$conn = open_connection();
+	$st_id_san  = mysql_real_escape_string($st_id, $conn);
+	/* be careful not to return credits that have been removed! */
+	$query = "select u_ad, u_add_ad, time_add, block_num from points where st_id = '$st_id_san' && time_rem is NULL;";
+	$result = mysql_query($query);
+	$return = array();
+	if( empty( $result ))
+		$numrows = 0;
+	else {
+		$numrows =  mysql_num_rows($result);
+		for($i = 0; $i < $numrows; ++$i) {
+			$u_ad = mysql_result($result, $i, "u_ad");
+			$u_add_ad = mysql_result($result, $i, "u_add_ad");
+			$time_add = mysql_result($result, $i, "time_add");
+			$block_num = mysql_result($result, $i, "block_num");
+			$return[$i] = array('u_ad' => $u_ad, 'u_add_ad' => $u_add_ad, 'time_add' => $time_add, 
+				'block_num' => $block_num);
+		}
+	}
+	return $return;
+}
 
 /*
 	deletes a student entry and all associated point entries for that student
@@ -552,8 +570,8 @@ function wipedb() {
 function delete_student($ad) {
 	$conn = open_connection();
 	$ad_san = mysql_real_escape_string($ad, $conn);
-	$squery = "delete from students where s_ad = '$ad_san';";
-	$pquery = "delete from points where s_ad = '$ad_san';";
+	$squery = "delete from users where u_ad = '$ad_san';";
+	$pquery = "delete from points where u_ad = '$ad_san';";
 	$presult = mysql_query($pquery, $conn);
 	$sresult = mysql_query($squery, $conn);
 	mysql_close($conn);
@@ -625,10 +643,10 @@ function query_study($st_id) {
 function add_study($irb, $credits, $desc, $flyer) {
 	$conn = open_connection();
 	$irb_san = mysql_real_escape_string($irb, $conn);
-	$credits_san = mysql_real_escape_string($credits, $conn);
+	$creditu_san = mysql_real_escape_string($credits, $conn);
 	$desc_san = mysql_real_escape_string($desc, $conn);
 	$flyer_san = mysql_real_escape_string($flyer, $conn);
-	$query = "insert into studies (st_irb, st_credits, st_desc, st_flyer, st_visible) values ('$irb_san', $credits_san, '$desc_san', '$flyer_san', 0);";
+	$query = "insert into studies (st_irb, st_credits, st_desc, st_flyer, st_visible) values ('$irb_san', $creditu_san, '$desc_san', '$flyer_san', 0);";
 	$result = mysql_query($query, $conn);
 	if( !$result )
 		return -1;
@@ -714,8 +732,8 @@ function study_update($st_id, $st_irb, $st_credits, $st_desc, $st_flyer) {
 		$query .= "st_irb = '$st_irb_san', ";
 	}
 	if( $st_credits != -1 ) {
-		$st_credits_san = mysql_real_escape_string($st_credits, $conn);
-		$query .= "st_credits = $st_credits_san, ";
+		$st_creditu_san = mysql_real_escape_string($st_credits, $conn);
+		$query .= "st_credits = $st_creditu_san, ";
 	}
 	if( $st_desc != "" ) {
 		$st_desc_san = mysql_real_escape_string($st_desc, $conn);
@@ -747,46 +765,35 @@ function get_blocks() {
 	return $blocks;
 }
 
-function update_block_times($b1Start, $b2Start, $b3Start, $semEnd) {
+function update_block_times($times) {
 	$conn = open_connection();
-	$b1_san = mysql_real_escape_string($b1Start, $conn);
-	$b2_san = mysql_real_escape_string($b2Start, $conn);
-	$b3_san = mysql_real_escape_string($b3Start, $conn);
-	$sem_end_san = mysql_real_escape_string($semEnd, $conn);
-	$times_array = array($b1_san, $b2_san, $b3_san, $sem_end_san);
-
-	for( $i = 0; $i < 4; $i++){
-		$block = $i+1; 
-		$query = "update blocks set u_time = $times_array[$i] where block = $block;";
-        	$result = mysql_query($query);
-		if( !$result )
-			return -1;
+	$i = 1;
+	$query = "select * from blocks;";
+    $result = mysql_query($query, $conn);
+	$block_count = mysql_num_rows($result);
+	foreach( $times as $time ) {
+		$time = mysql_real_escape_string($time, $conn);
+		if( $i > $block_count )
+			$query = "insert into blocks (block, u_time) values ('$i', '$time');";
+		else
+			$query = "update blocks set u_time = $time where block = $i;";
+		$result = mysql_query($query, $conn);
+		++$i;
 	}
-	mysql_close($conn);
+	if( $i < $block_count ) {
+		$query = "delete from blocks where block >= $i;";
+		$result = mysql_query($query, $conn);
+	}
 	return 'Dates changed successfully.';
 }
 
 function query_dept($ad) {
 	$conn = open_connection();
 	//assumes only 1 entry for given AD user
-	$query = "select u_department from users where u_ad = 'awilke';";
-	$result = mysql_result(mysql_query($query),0,'u_department');
-	mysql_close($conn);
-	return $result;
-}
-
-function get_depts() {
-	$conn = open_connection();
-	$query = "select distinct u_department from users;";
+	$query = "select u_dept from users where u_ad = '$ad';";
 	$result = mysql_query($query);
-	$depts = array();
-	$numrows = mysql_num_rows($result);
-	for($i=0; $i<$numrows; $i++) {
-		$dept = mysql_result($result, $i, "u_department");
-		$depts[$i] = $dept;
-	}
 	mysql_close($conn);
-	return $depts;
+	return mysql_result($result, 0, 'u_dept');
 }
 
 function get_prof_ads() {
@@ -820,8 +827,8 @@ function br_create_backup() {
                 return "ERROR: Write failed, backup is incomplete.";
         $students = get_all_students_credits( "Last Name" );
         foreach( $students as $student ) {
-                $credits = $student[s_credits];
-                $line = "\"$student[s_lname]\",\"$student[s_fname]\",\"$student[s_ad]\",\"$student[s_prof]\",\"$credits\",\"$student[s_credits_b1]\",\"$student[s_credits_b2]\",\"$student[s_credits_b3]\"";
+                $credits = $student[u_credits];
+                $line = "\"$student[u_lname]\",\"$student[u_fname]\",\"$student[u_ad]\",\"$student[u_prof]\",\"$credits\",\"$student[u_creditu_b1]\",\"$student[u_creditu_b2]\",\"$student[u_creditu_b3]\"";
                 $line .= "\r\n";
                 if( fwrite( $csvhandle, $line ) === false )
                         return "ERROR: Write failed, backup is incomplete.";
@@ -830,14 +837,4 @@ function br_create_backup() {
         return "Backup is complete. You can download the file <a href=\"utility/download/$downname\">here</a>.";
 }
 
-
-
 ?>
-
-
-
-
-
-
-
-

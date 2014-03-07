@@ -22,7 +22,7 @@ PYCTS and this file are Copyright 2011 by Mark Platek.
 require_once("includes/html_print.php");
 require_once("includes/db.php");
 
-if( !isset($_SESSION['active']) ) {
+if( !isset($_SESSION['active'])) {
 	print_system_message("Invalid Session", "You can't use this page until you log in.", "index.php");
 	exit;
 }
@@ -50,108 +50,123 @@ echo '<div id="studies">';
 
 echo '<div class="section">';
 $studies = get_studies();
+
 if( empty($studies) ) {
 	echo 'There are no studies to display.';
-	echo '</div> <!-- closing section div -->';
+	echo '</div>';
 }
 else {
 
+if($_SESSION['is_student'])
+{
+	echo '<h2>Studies Currently Available to Students</h2>';
+}
+
 echo <<<EOF
-<table border="1">
-<tr>
-	<th>IRB Number</th>
-	<th>Description</th>
-	<th>Credits</th>
-	<th>Flyer</th>
-	<th>Visible to students?</th>
-</tr>
+<script type="text/javascript" charset="utf-8">
+    $(document).ready(function() {
+        $('#studiesTable').dataTable.( {
+			"bPaginate": false,
+			"bLengthChange": false,
+			"bFilter": false,
+			"bSort": false,
+			"bInfo": false,
+			"bAutoWidth": false
+		} ).makeEditable({
+			sUpdateURL: "UpdateData.php"
+		});
+    } );
+</script>
+<table id="studiesTable" border="1">
+	<thead>
+		<tr>
+			<th>IRB Number</th>
+			<th>Description</th>
+			<th>Credits</th>
+			<th>Flyer</th>
 EOF;
+
+	if(!$_SESSION['is_student'])
+		echo '<th>Visible?</th>';
+	echo '</tr>';
+    echo '</thead>';
+    echo '<tbody>';
 	foreach( $studies as $study) {
+		if($_SESSION['is_student'] && !$study['st_visible'])
+			continue;
+        $id = $study['st_id'];
 		echo '<tr>';
-		echo "<td>IRB #$study[st_irb]</td>";
-		Echo "<td>$study[st_desc]</td>";
-		echo "<td>$study[st_credits]</td>";
+		echo "<td class=\"editableSingle IRBnumber removable id$id\">IRB #$study[st_irb]</td>";
+		echo "<td class=\"editableSingle Description removable id$id\">$study[st_desc]</td>";
+		echo "<td class=\"editableSingle Credits removable id$id\">$study[st_credits]</td>";
 		echo '<td><a href="utility/flyers/' . $study['st_id'] . '/' . $study['st_flyer'] . '">' . $study['st_flyer'] . '</a></td>';
-		if( $study['st_visible'] == 1 )
-			echo "<td>Yes</td>";
-		else
-			echo "<td>No</td>";
+		if(!$_SESSION['is_student']) {
+			if( $study['st_visible'] == 1 )
+				echo "<td class=\"editableSingle Visible removable id$id\">Yes</td>";
+			else
+				echo "<td class=\"editableSingle Visible removable id$id\">No</td>";
+		}
 		echo '</tr>';
 	}
+    echo '</tbody>';
 	echo '</table>';
 	echo '</div><!-- closing section div -->';
 }	
 
 $tstamp = time();
 
+if(!$_SESSION['is_student']) {
 echo <<<EOF
 <div class="section">
-<h2>Add Study</h2>
-<p>
-Fill out this form to create a new study. You have to upload the flyer in PDF format.
-</p>
-
-<form enctype="multipart/form-data" method="post" action="user.php?studies">
-<input type="hidden" name="action_timestamp" value="$tstamp"/>
-
-<dl>
-<dt>IRB Number</dt>
-<dd>
-	<input class="text" type="text" name="irb"/> <span class="input_explanation">(e.g. 11-19)</span>
-</dd>
-
-<dt>Credits Worth</dt>
-<dd>
-	<select name="credits">
-		<option value="0.5">0.5 Credits</option>
-		<option value="1">1.0 Credit</option>
-		<option value="1.5">1.5 credits</option>
-		<option value="2">2.0 Credits</option>
-		<option value="2.5">2.5 Credits</option>
-		<option value="3">3.0 Credits</option>
-		<option value="3.5">3.5 Credits</option>
-		<option value="4">4.0 Credits</option>
-		<option value="4.5">4.5 Credits</option>
-		<option value="5">5.0 Credits</option>
-	</select>
-</dd>
-
-<dt>Upload Flyer</dt>
-<dd>
-	<input name="flyer" type="file"/>
-</dd>
-
-<dt>Description</dt>
-<dd>
-	<input class="text" type="text" name="desc"/> <span class="input_explanation">(e.g. "Categorization and Multiple-Cue Judgements")</span>
-</dd>
-</dl>
-
-<p>
-<input type="submit" name="add_study" value="Add Study"/>
-</p>
-
-</form>
-</div> <!-- closing section div -->
+	<h2>Add Study</h2>
+	<p>Fill out this form to create a new study. You have to upload the flyer in PDF format.</p>
+	
+	<form enctype="multipart/form-data" method="post" action="user.php?studies">
+		<input type="hidden" name="action_timestamp" value="$tstamp"/>		
+		<dl>
+			<dt>IRB Number</dt>
+			<dd><input class="text" type="text" name="irb"/> <span class="input_explanation">(e.g. 11-19)</span></dd>			
+			<dt>Credits Worth</dt>
+			<dd>
+				<select name="credits">
+					<option value="0.5">0.5 Credits</option>
+					<option value="1">1.0 Credit</option>
+					<option value="1.5">1.5 credits</option>
+					<option value="2">2.0 Credits</option>
+					<option value="2.5">2.5 Credits</option>
+					<option value="3">3.0 Credits</option>
+					<option value="3.5">3.5 Credits</option>
+					<option value="4">4.0 Credits</option>
+					<option value="4.5">4.5 Credits</option>
+					<option value="5">5.0 Credits</option>
+				</select>
+			</dd>
+			
+			<dt>Upload Flyer</dt>
+			<dd><input name="flyer" type="file"/></dd>
+			
+			<dt>Description</dt>
+			<dd><input class="text" type="text" name="desc"/> <span class="input_explanation">(e.g. "Categorization and Multiple-Cue Judgements")</span></dd>
+		</dl>
+		
+		<p><input type="submit" name="add_study" value="Add Study"/></p>
+	</form>
+</div>
 
 EOF;
 
 if( count($studies) == 0 ) {
-	echo '</div> <!-- closing div "studies" -->';
+	echo '</div>';
 	return;
 }
 
 echo <<<EOF
 <div class="section">
-<h2>Delete Studies</h2>
-EOF;
-
-
-echo <<<EOF
-<form method="post" action="user.php?studies" onsubmit="return confirm('Are you sure you want to delete?');">
-<input type="hidden" name="action_timestamp" value="$tstamp"/>
-<p>
-<select name="st_id">
+	<h2>Delete Studies</h2>
+	<form method="post" action="user.php?studies" onsubmit="return confirm('Are you sure you want to delete?');">
+		<input type="hidden" name="action_timestamp" value="$tstamp"/>
+		<p>
+			<select name="st_id">
 EOF;
 
 foreach( $studies as $study ) {
@@ -159,25 +174,23 @@ foreach( $studies as $study ) {
 }
 
 echo <<<EOF
-</select>
-<input type="submit" value="Delete Study" name="delete_study"/>
-</p>
-</form>
-</div> <!-- closing section div -->
+			</select>
+			<input type="submit" value="Delete Study" name="delete_study"/>
+		</p>
+	</form>
+</div>
 
-EOF;
-
-echo <<<EOF
 <div class="section">
-<h2>Toggle Visibility</h2>
-<p>
-Invisible studies are tracked by PYCTS but are not displayed to students. To make an invisible study visible (and vice versa), select it from the list below.
-</p>
-
-<form method="post" action="user.php?studies">
-<input type="hidden" name="action_timestamp" value="$tstamp"/>
-<p>
-<select name="st_id">
+	<h2>Toggle Visibility</h2>
+	<p>
+		Invisible studies are tracked by PYCTS but are not displayed to students. To make an invisible study 
+		visible (and vice versa), select it from the list below.
+	</p>
+	
+	<form method="post" action="user.php?studies">
+		<input type="hidden" name="action_timestamp" value="$tstamp"/>
+		<p>
+			<select name="st_id">
 EOF;
 
 foreach( $studies as $study ) {
@@ -189,24 +202,20 @@ foreach( $studies as $study ) {
 }
 
 echo <<<EOF
-</select>
-<input type="submit" name="toggle_visibility" value="Toggle Visibility"/>
-</p>
-</form>
-</div> <!-- closing section div -->
-EOF;
+			</select>
+			<input type="submit" name="toggle_visibility" value="Toggle Visibility"/>
+		</p>
+	</form>
+</div>
 
-echo <<<EOF
 <div class="section">
-<h2>Edit Study Info</h2>
-<p>
-You can change the information associated with a study from this form. Leave blank any fields you do not wish to change.
-</p>
-
-<form enctype="multipart/form-data" method="post" action="user.php?studies">
-<input type="hidden" name="action_timestamp" value="$tstamp"/>
-<p>
-<select name="st_id">
+	<h2>Edit Study Info</h2>
+	<p>You can change the information associated with a study from this form. Leave blank any fields you do not wish to change.</p>
+	
+	<form enctype="multipart/form-data" method="post" action="user.php?studies">
+		<input type="hidden" name="action_timestamp" value="$tstamp"/>
+		<p>
+			<select name="st_id">
 EOF;
 
 foreach( $studies as $study ) {
@@ -214,51 +223,45 @@ foreach( $studies as $study ) {
 }
 
 echo <<<EOF
-</select>
-</p>
+			</select>
+		</p>
+	<dl>
+		<dt>New IRB Number</dt>
+		<dd><input class="text" type="text" name="irb"/> <span class="input_explanation">(e.g. 11-19)</span></dd>
+		
+		<dt>Credits Worth</dt>
+		<dd>
+			<select name="credits">
+				<option value="0.5">0.5 Credits</option>
+				<option value="1">1.0 Credit</option>
+				<option value="1.5">1.5 credits</option>
+				<option value="2">2.0 Credits</option>
+				<option value="2.5">2.5 Credits</option>
+				<option value="3">3.0 Credits</option>
+				<option value="3.5">3.5 Credits</option>
+				<option value="4">4.0 Credits</option>
+				<option value="4.5">4.5 Credits</option>
+				<option value="5">5.0 Credits</option>
+			</select>
+		</dd>
+		
+		<dt>Replace Flyer</dt>
+		<dd><input name="flyer" type="file"/></dd>
+		
+		<dt>New Description</dt>
+		<dd><input class="text" type="text" name="desc"/> <span class="input_explanation">(e.g. "Categorization and Multiple-Cue Judgements")</span></dd>
+	</dl>
 
-<dl>
-<dt>New IRB Number</dt>
-<dd>
-	<input class="text" type="text" name="irb"/> <span class="input_explanation">(e.g. 11-19)</span>
-</dd>
+	<p><input type="submit" value="Change Info" name="edit_info"/></p>
+EOF;
+}
+echo <<<EOF
 
-<dt>Credits Worth</dt>
-<dd>
-	<select name="credits">
-		<option value="0.5">0.5 Credits</option>
-		<option value="1">1.0 Credit</option>
-		<option value="1.5">1.5 credits</option>
-		<option value="2">2.0 Credits</option>
-		<option value="2.5">2.5 Credits</option>
-		<option value="3">3.0 Credits</option>
-		<option value="3.5">3.5 Credits</option>
-		<option value="4">4.0 Credits</option>
-		<option value="4.5">4.5 Credits</option>
-		<option value="5">5.0 Credits</option>
-	</select>
-</dd>
-
-<dt>Replace Flyer</dt>
-<dd>
-	<input name="flyer" type="file"/>
-</dd>
-
-<dt>New Description</dt>
-<dd>
-	<input class="text" type="text" name="desc"/> <span class="input_explanation">(e.g. "Categorization and Multiple-Cue Judgements")</span>
-</dd>
-</dl>
-
-<p>
-<input type="submit" value="Change Info" name="edit_info"/>
-</p>
-
-</form>
-</div> <!-- closing section div -->
+	</form>
+</div>
 EOF;
 
-echo '</div> <!-- closing div "studies" -->';
+echo '</div>';
 
 /* -------------------------------------------------------------------------- */
 /* study function */
@@ -313,7 +316,6 @@ function studies_delete_study($st_id) {
 
 	$st_ids = array($st_id);
 	$result = delete_studies($st_ids);
-
 	if( !$result ) {
 		return 'ERROR: There was an error, the study couldn\'t be removed.';
 	}
@@ -391,34 +393,19 @@ function send_email($s_lname, $s_fname, $s_ad, $st_id) {
 
 echo <<<EOF
 <html>
-
-<head>
-
-
-
-</head>
-
-<body>
-<div id="studentcontent">
-
-EOF;
-echo <<<EOF
-<p>
-The study <b>$st_desc</b> has been made available for <b>$num_credits</b> credits.
-<br>
-You can find more information for this study at the link below: 
-<br>
-<br>
-web2.clarkson.edu/projects/researchcredit/utility/flyers/$st_id/$st_flyer
-</p>
-
-<p>
-This is an automatically-generated email, please do not reply to it. If you have questions, please ask your professor.
-</p>
-EOF;
-echo <<<EOF
-</div>
-</body>
+	<head></head>
+	<body>
+		<div id="studentcontent">
+			<p>
+				The study <b>$st_desc</b> has been made available for <b>$num_credits</b> credits.<br>
+				You can find more information for this study at the link below: 
+				<br><br>
+				web2.clarkson.edu/projects/researchcredit/utility/flyers/$st_id/$st_flyer
+			</p>
+			
+			<p>This is an automatically-generated email, please do not reply to it. If you have questions, please ask your professor.</p>
+		</div>
+	</body>
 </html>
 EOF;
 

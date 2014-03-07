@@ -22,8 +22,8 @@ PYCTS and this file are Copyright 2011 by Mark Platek.
 require_once("includes/html_print.php");
 require_once("includes/db.php");
 
-if( !isset($_SESSION['active']) ) {
-	print_system_message("Invalid Session", "You can't use this page until you log in.", "index.php");
+if( !isset($_SESSION['active']) || $_SESSION['is_student']) {
+	echo '<meta http-equiv="refresh" content="0; url=index.php">';
 	exit;
 }
 
@@ -42,44 +42,38 @@ $block_one_start = $blocks[1];
 $block_two_start = $blocks[2];
 $block_three_start = $blocks[3];
 $semester_end = $blocks[4];
-if(time() >= $block_one_start && time() < $block_two_start) {
+
+if( time() >= $block_one_start && time() < $block_two_start )
 	$block_num = 1;
-} else if(time() >= $block_two_start && time() < $block_three_start) {
+else if( time() >= $block_two_start && time() < $block_three_start )
 	$block_num = 2;
-} else if(time() >= $block_three_start && time() < $semester_end) {
+else if( time() >= $block_three_start && time() < $semester_end )
 	$block_num = 3;
-} else {
+else
 	$block_num = 1;
-}
 
 $studentinfo = query_students($_GET['studentdisplay']);
 $studentcredits = query_credits($_GET['studentdisplay'], false);
 $removedcredits = query_credits($_GET['studentdisplay'], true);
 $aggregated_credits = count($studentcredits) + count($removedcredits);
 $total_credits = 0;
-for( $i = 0; $i < sizeof($studentcredits); $i++){
-	$total_credits += $studentcredits[$i][u_amount];}
-$studies = get_studies();
 
+for( $i = 0; $i < sizeof($studentcredits); $i++)
+	$total_credits += $studentcredits[$i][u_amount];
+	
+$studies = get_studies();
 print_action_result($message);
 
 echo '<div id="studentdisplay">';
 
 if( empty($studentinfo) )
-	return "ERROR: Invalid Student."; 
+	return "ERROR: Invalid Student.";
+	
 echo <<<EOF
 <div class="section">
-<h1>$studentinfo[fname] $studentinfo[lname]</h1>
-</div> <!-- closing section div -->
-
-<div class="section">
-
-<p>
-AD Username: $studentinfo[ad]
-</p>
-<p>
-Professor: $studentinfo[prof]
-</p>
+	<h2>Student:  </h2> $studentinfo[fname] $studentinfo[lname] ($studentinfo[ad]) <br>
+	<h2>Professor: </h2>   $studentinfo[prof]
+	<br><br>
 EOF;
 
 if( $total_credits == 1 )
@@ -88,174 +82,146 @@ else
 	echo "<p>This student has <strong>$total_credits</strong> credits.</p>";
 
 echo <<<EOF
-</div> <!-- closing section div -->
-EOF;
-
-echo <<<EOF
+</div>
 <div class="section">
-<h2>Add Miscellaneous Credits</h2>
-<p>
-Miscellaneous credits will show up in the credit listing for this student, but they are not associated with a particular study.
-</p>
-<form method="post" action="user.php?studentdisplay=$_GET[studentdisplay]">
-
-<dl>
-<dt>Number of credits</dt>
-<dd>
-	<select name="num_credits">
-		<option value="0.5">0.5</option>
-		<option value="1">1.0</option>
-		<option value="1.5">1.5</option>
-		<option value="2">2.0</option>
-		<option value="2.5">2.5</option>
-		<option value="3">3.0</option>
-		<option value="3.5">3.5</option>
-		<option value="4">4.0</option>
-		<option value="4.5">4.5</option>
-		<option value="5">5.0</option>
-	</select>
-</dd>
-<dt>
-
+	<h2>Add Miscellaneous Credits</h2>
+		<p>Miscellaneous credits will show up in the credit listing for this student, but they are not associated with a particular study.</p>
+		<form method="post" action="user.php?studentdisplay=$_GET[studentdisplay]">
+	
+		<dl>
+			<dt>Number of credits</dt>
+			<dd>
+				<select name="num_credits">
+					<option value="0.5">0.5</option>
+					<option value="1">1.0</option>
+					<option value="1.5">1.5</option>
+					<option value="2">2.0</option>
+					<option value="2.5">2.5</option>
+					<option value="3">3.0</option>
+					<option value="3.5">3.5</option>
+					<option value="4">4.0</option>
+					<option value="4.5">4.5</option>
+					<option value="5">5.0</option>
+				</select>
+			</dd>
+		<dt>Block</dt>
+		<dd>
+			<select name="block_num">
 EOF;
-
-echo "<dt>Block</dt>";
-echo "<dd>";
-echo "<select name=\"block_num\">";
 if( $block_num == 1 )
 {
 	echo "<option value=\"1\" selected=\"selected\">1</option>";
-        echo "<option value=\"2\">2</option>";
-        echo "<option value=\"3\">3</option>";
+	echo "<option value=\"2\">2</option>";
+	echo "<option value=\"3\">3</option>";
 }
 else if( $block_num == 2 )
 {
 	echo "<option value=\"1\">1</option>";
-        echo "<option value=\"2\" selected=\"selected\">2</option>";
-        echo "<option value=\"3\">3</option>";
+	echo "<option value=\"2\" selected=\"selected\">2</option>";
+	echo "<option value=\"3\">3</option>";
 }
 else if( $block_num == 3 )
 {
-        echo "<option value=\"1\">1</option>";
-        echo "<option value=\"2\">2</option>";
+	echo "<option value=\"1\">1</option>";
+	echo "<option value=\"2\">2</option>";
 	echo "<option value=\"3\" selected=\"selected\">3</option>";
 }
-echo "</select>";
-echo "</dd>";
+
 echo <<<EOF
-<dt></dt>
-<dt>Description</dt>
-<dd>
-	<input class="text" type="text" name="description"/> <span class="input_explanation">(Required)</span>
-</dd>
+			</select>
+		</dd>
+	<dt></dt>
+	<dt>Description</dt>
+	<dd><input class="text" type="text" name="description"/> <span class="input_explanation">(Required)</span></dd>
 </dl>
 
 <p>
-<input type="hidden" name="ad" value="$_GET[studentdisplay]"/>
-<input type="submit" value="Add Credits" name="addmisc"/>
+	<input type="hidden" name="ad" value="$_GET[studentdisplay]"/>
+	<input type="submit" value="Add Credits" name="addmisc"/>
 </p>
 </form>
-</div> <!-- closing section div -->
-EOF;
+</div>
 
-echo <<<EOF
 <div class="section">
-<h2>Add Study Credits</h2>
-<p>
-Credits added this way are associated with a study.
-</p>
-
-<form method="post" action="user.php?studentdisplay=$_GET[studentdisplay]">
+	<h2>Add Study Credits</h2>
+	<p>Credits added this way are associated with a study.</p>
+	<form method="post" action="user.php?studentdisplay=$_GET[studentdisplay]">
 EOF;
 
 if( empty($studies) ) {
-	echo '<p>No studies exist yet. At least one must exist before you can add credits.</p>';
+	echo '		<p>No studies exist yet. At least one must exist before you can add credits.</p>';
 }
 else {
 
 echo <<<EOF
-<dl>
-
-<dt>Study</dt>
-<dd>
-	<select name="st_id">
+		<dl>
+			<dt>Study</dt>
+			<dd>
+				<select name="st_id">
 EOF;
 
 	foreach( $studies as $study ) {
-		echo "<option value=\"$study[st_id]\">IRB #$study[st_irb]: $study[st_desc] [$study[st_credits] credits]</option>";
+		echo "				<option value=\"$study[st_id]\">IRB #$study[st_irb]: $study[st_desc] [$study[st_credits] credits]</option>";
 	}
 
 echo <<<EOF
-	</select>
-</dd>
+				</select>
+			</dd>
+		<dt>Block</dt>
+		<dd>
+			<select name="block_num_study">
 EOF;
-
-echo "<dt>Block</dt>";
-echo "<dd>";
-echo "<select name=\"block_num_study\">";
-if( $block_num == 1 )
-{
-        echo "<option value=\"1\" selected=\"selected\">1</option>";
-        echo "<option value=\"2\">2</option>";
-        echo "<option value=\"3\">3</option>";
-}
-else if( $block_num == 2 )
-{
-        echo "<option value=\"1\">1</option>";
-        echo "<option value=\"2\" selected=\"selected\">2</option>";
-        echo "<option value=\"3\">3</option>";
-}
-else if( $block_num == 3 )
-{
-        echo "<option value=\"1\">1</option>";
-        echo "<option value=\"2\">2</option>";
-        echo "<option value=\"3\" selected=\"selected\">3</option>";
-}
-echo "</select>";
-echo "</dd>";
+	if( $block_num == 1 )
+	{
+		echo "<option value=\"1\" selected=\"selected\">1</option>";
+		echo "<option value=\"2\">2</option>";
+		echo "<option value=\"3\">3</option>";
+	}
+	else if( $block_num == 2 )
+	{
+		echo "<option value=\"1\">1</option>";
+		echo "<option value=\"2\" selected=\"selected\">2</option>";
+		echo "<option value=\"3\">3</option>";
+	}
+	else if( $block_num == 3 )
+	{
+		echo "<option value=\"1\">1</option>";
+		echo "<option value=\"2\">2</option>";
+		echo "<option value=\"3\" selected=\"selected\">3</option>";
+	}
 echo <<<EOF
 
-<dt>Description</dt>
-<dd>
-	<input class="text" type="text" name="desc"/> <span class="input_explanation">(Not required)</span>
-</dd>
+			</select>
+		</dd>
 
-</dl>
+		<dt>Description</dt>
+		<dd><input class="text" type="text" name="desc"/> <span class="input_explanation">(Not required)</span></dd>
+	</dl>
 
 <p>
-<input type="hidden" name="ad" value="$_GET[studentdisplay]"/>
-<input type="submit" name="quick_add" value="Add Study Credits"/>
+	<input type="hidden" name="ad" value="$_GET[studentdisplay]"/>
+	<input type="submit" name="quick_add" value="Add Study Credits"/>
 </p>
 
 EOF;
 }
 
-echo '</form></div> <!-- closing section div -->';
+echo '</form>
+	</div>';
 
 if( $aggregated_credits > 0 ) {
-
 echo <<<EOF
 <form method="post" action="user.php?studentdisplay=$_GET[studentdisplay]">
-<div class="section">
-<h2>Remove Selected Credits</h2>
-
-<p>
-<strong>Removing a credit is permanent and cannot be reversed.</strong>
-</p>
-<p>
-Please select the credit(s) you want to remove from the table, and give your reason for removing them below.
-</p>
-
-<p>
-Reason: <input class="text" type="text" name="description"/> <span class="input_explanation">(Required)</span>
-</p>
-
-<p>
-<input type="hidden" name="ad" value="$_GET[studentdisplay]"/>
-<input type="submit" value="Remove Credits" name="remove"/>
-</p>
-
-</div> <!-- closing section div -->
+	<div class="section">
+		<h2>Remove Selected Credits</h2>
+		<p><strong>Removing a credit is permanent and cannot be reversed.</strong></p>
+		<p>Please select the credit(s) you want to remove from the table, and give your reason for removing them below.</p>	
+		<p>Reason: <input class="text" type="text" name="description"/> <span class="input_explanation">(Required)</span></p>
+		<p>
+			<input type="hidden" name="ad" value="$_GET[studentdisplay]"/>
+			<input type="submit" value="Remove Credits" name="remove"/>
+		</p>
+	</div>
 EOF;
 
 	/* 
@@ -291,16 +257,16 @@ EOF;
 
 echo <<<EOF
 <div class="section">
-<table>
-<tr>
-	<th>Study</th>
-	<th>Given/Removed by</th>
-	<th>Date/Time</th>
-	<th>Description</th>
-	<th>Credits</th>
-	<th>Block</th>
-	<th>Selection</th>
-</tr>
+	<table>
+		<tr>
+			<th>Study</th>
+			<th>Given/Removed by</th>
+			<th>Date/Time</th>
+			<th>Description</th>
+			<th>Credits</th>
+			<th>Block</th>
+			<th>Selection</th>
+		</tr>
 EOF;
 	
 	foreach( $credits_show as $credit ) {
@@ -309,15 +275,15 @@ EOF;
 
 echo <<<EOF
 <tr>
-<td>IRB #$irb</td>
-<td>$credit[u_add]</td>
-<td>$credit[time_add]</td>
-<td>$credit[desc_add]</td>
-<td>$credits</td>
-<td>$credit[block_num]</td>
-<td>
-<input type="checkbox" name="$credit[time_add]_$credit[u_add]" value="identifier"/>
-</td>
+	<td>IRB #$irb</td>
+	<td>$credit[u_add]</td>
+	<td>$credit[time_add]</td>
+	<td>$credit[desc_add]</td>
+	<td>$credits</td>
+	<td>$credit[block_num]</td>
+	<td>
+	<input type="checkbox" name="$credit[time_add]_$credit[u_add]" value="identifier"/>
+	</td>
 </tr>
 EOF;
 
@@ -326,15 +292,15 @@ EOF;
 
 echo <<<EOF
 <tr>
-<td>Miscellaneous</td>
-<td>$credit[u_add]</td>
-<td>$credit[time_add]</td>
-<td>$credit[desc_add]</td>
-<td>$credit[u_amount]</td>
-<td>$credit[block_num]</td>
-<td>
-<input type="checkbox" name="$credit[p_id]" value="identifier_misc"/>
-</td>
+	<td>Miscellaneous</td>
+	<td>$credit[u_add]</td>
+	<td>$credit[time_add]</td>
+	<td>$credit[desc_add]</td>
+	<td>$credit[u_amount]</td>
+	<td>$credit[block_num]</td>
+	<td>
+		<input type="checkbox" name="$credit[p_id]" value="identifier_misc"/>
+	</td>
 </tr>
 EOF;
 		
@@ -346,15 +312,13 @@ EOF;
 
 echo <<<EOF
 <tr>
-<td class="credit_removed">IRB #$irb</td>
-<td class="credit_removed">$credit[u_add]</td>
-<td class="credit_removed">$credit[time_rem]</td>
-<td class="credit_removed">$credit[desc_rem]</td>
-<td class="credit_removed">$credits</td>
-<td class="credit_removed">$credit[block_num]</td>
-<td class="credit_removed">
-(Removed)
-</td>
+	<td class="credit_removed">IRB #$irb</td>
+	<td class="credit_removed">$credit[u_add]</td>
+	<td class="credit_removed">$credit[time_rem]</td>
+	<td class="credit_removed">$credit[desc_rem]</td>
+	<td class="credit_removed">$credits</td>
+	<td class="credit_removed">$credit[block_num]</td>
+	<td class="credit_removed">(Removed)</td>
 </tr>
 EOF;
 
@@ -364,28 +328,26 @@ EOF;
 
 echo <<<EOF
 <tr class="credit_removed">
-<td class="credit_removed">Miscellaneous</td>
-<td class="credit_removed">$credit[u_rem]</td>
-<td class="credit_removed">$credit[time_rem]</td>
-<td class="credit_removed">$credit[desc_rem]</td>
-<td class="credit_removed">$credits</td>
-<td class="credit_removed">$credit[block_num]</td>
-<td class="credit_removed">
-(Removed)
-</td>
+	<td class="credit_removed">Miscellaneous</td>
+	<td class="credit_removed">$credit[u_rem]</td>
+	<td class="credit_removed">$credit[time_rem]</td>
+	<td class="credit_removed">$credit[desc_rem]</td>
+	<td class="credit_removed">$credits</td>
+	<td class="credit_removed">$credit[block_num]</td>
+	<td class="credit_removed">(Removed)</td>
 </tr>
 EOF;
 	}
 
 echo <<<EOF
 </table>
-</div> <!-- closing section div -->
+</div>
 </form>
 EOF;
 
 }
 
-echo '</div> <!-- closing div "studentdisplay" -->';
+echo '</div>';
 
 /* -------------------------------------------------------------------------- */
 /* studentdisplay functions */
@@ -478,29 +440,13 @@ function send_addition_email($s_ad, $s_desc, $s_credits){
 
 echo <<<EOF
 <html>
-
-<head>
-
-
-
-</head>
-
-<body>
-<div id="studentcontent">
-
-EOF;
-echo <<<EOF
-<p>
-$message
-<p>
-
-<p>
-This is an automatically-generated email, please do not reply to it. If you have questions, please ask your professor.
-</p>
-EOF;
-echo <<<EOF
-</div>
-</body>
+	<head></head>
+	<body>
+		<div id="studentcontent">
+			<p>$message</p>
+			<p>This is an automatically-generated email, please do not reply to it. If you have questions, please ask your professor.</p>
+		</div>
+	</body>
 </html>
 EOF;
 
@@ -511,7 +457,7 @@ EOF;
 		$email_msg = "The report has been sent.";
 	}
 	else {
-		$email_msg = "Oops! Something went wrong contacting the mail server, so your report could not be sent.";
+		$email_msg = "Oops! Something went wrong contacting the mail server, your report could not be sent.";
 	}
 }
 
@@ -529,42 +475,24 @@ function send_removal_email($s_ad, $desc){
 
 echo <<<EOF
 <html>
-
-<head>
-
-
-
-</head>
-
-<body>
-<div id="studentcontent">
-
-EOF;
-echo <<<EOF
-<p>
-Credits have been removed from your account. (Reason: <b>$desc</b>)
-<p>
-
-<p>
-This is an automatically-generated email, please do not reply to it. If you have questions, please ask your professor.
-</p>
-EOF;
-echo <<<EOF
-</div>
-</body>
+	<head></head>
+	<body>
+		<div id="studentcontent">
+			<p>Credits have been removed from your account. (Reason: <b>$desc</b>)</p>
+			<p>This is an automatically-generated email, please do not reply to it. If you have questions, please ask your professor.</p>
+		</div>
+	</body>
 </html>
 EOF;
 
 	$message = ob_get_contents();
 	ob_end_clean();
-//	echo "hr/>;
-//	echo $message;
 	$success = mail($recipient, $subject, $message, $headers);
 	if( $success ) {
 		$email_msg = "The report has been sent.";
 	}
 	else {
-		$email_msg = "Oops! Something went wrong contacting the mail server, so your report could not be sent.";
+		$email_msg = "Oops! Something went wrong contacting the mail server, your report could not be sent.";
 	}
 }
 

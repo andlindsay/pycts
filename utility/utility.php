@@ -21,12 +21,14 @@ PYCTS and this file are Copyright 2011 by Mark Platek.
 
 /* check for unauthenticated access */
 if( !isset($_SESSION['active']) ) {
+	echo '<meta http-equiv="refresh" content="0; url=index.php">';
 	exit;
 }
 
 echo '<div id="utility">';
 
-$sel_roster = $sel_user_management = $sel_stats = $sel_studies  = $sel_backup_restore = $sel_sys_opts = "";
+// Set the current tab to be selected
+$sel_roster = $sel_user_management = $sel_stats = $sel_studies = $sel_backup_restore = $sel_sys_opts = $sel_report  = $sel_sched = "";
 $sel = 'class="selected"';
 if( isset($_GET['user_management']) )
 	$sel_user_management = $sel;
@@ -38,23 +40,38 @@ else if( isset($_GET['backup_restore']) )
 	$sel_backup_restore = $sel;
 else if( isset($_GET['system_options']) )
 	$sel_sys_opts = $sel;
+else if( isset($_GET['report']) )
+	$sel_report = $sel;
 else
-	$sel_roster = $sel;
+{
+	if( $_SESSION['is_student'] )
+		$sel_report = $sel;
+	else
+		$sel_roster = $sel;
+}
 
-/* print navigation */
+// print navigation, highlight selected tab
 echo '<form class="search" id="search" method="get" action="user.php">';
 echo '<ul>';
-echo '<li><a ' . $sel_roster . ' href="user.php">Roster</a></li>';
-if( $_SESSION['role'] == 0 || $_SESSION['role'] == 1 )
-	echo '<li><a ' . $sel_stats . ' href="user.php?statistics">Statistics</a></li>';
-if( $_SESSION['role'] == 0 )
+if( $_SESSION['is_student'] == true)
+{
+	echo '<li><a ' . $sel_report . ' href="user.php?report">Report</a></li>';
 	echo '<li><a ' . $sel_studies . ' href="user.php?studies">Studies</a></li>';
-if( $_SESSION['role'] == 0 )
-        echo '<li><a ' . $sel_user_management . ' href="user.php?user_management">User Management</a></li>';
-if( $_SESSION['role'] == 0 )
-	echo '<li><a ' . $sel_backup_restore . ' href="user.php?backup_restore">Database Management</a></li>';
-if( $_SESSION['role'] == 0 )
-	echo '<li><a ' . $sel_sys_opts . ' href="user.php?system_options">System Options</a></li>';
+}
+else
+{
+	// visible to both RA and Prof users
+	echo '<li><a ' . $sel_roster . ' href="user.php">Roster</a></li>';
+	echo '<li><a ' . $sel_stats . ' href="user.php?statistics">Statistics</a></li>';
+	// prof only pages
+	if( $_SESSION['role'] == 0 )
+	{
+		echo '<li><a ' . $sel_studies . ' href="user.php?studies">Studies</a></li>';
+		echo '<li><a ' . $sel_user_management . ' href="user.php?user_management">Users</a></li>';
+		echo '<li><a ' . $sel_backup_restore . ' href="user.php?backup_restore">Database</a></li>';
+		echo '<li><a ' . $sel_sys_opts . ' href="user.php?system_options">Blocks</a></li>';
+	}
+}
 echo <<<EOF
 <li class="search">
 	<select class="search" name="filter_element" onchange="clearfill(); this.form.submit()">
@@ -78,9 +95,7 @@ echo <<<EOF
 </li>
 </ul>
 </form>
+</div>
 EOF;
-
-echo '</div> <!-- closing div "utility" -->';
-
 ?>
 
