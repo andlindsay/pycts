@@ -1,2 +1,0 @@
-fs sa ./ web all
-grep -rl "backup_restore" *.php | xargs sed -i 's/admin\b/database_management/g'
