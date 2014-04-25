@@ -363,7 +363,7 @@ function email_all_students($ad, $st_id) {
 			$s_fname = mysql_result($result, $i, "s_fname");
 			$s_ad = mysql_result($result, $i, "s_ad");
 			
-			send_email($s_lname, $s_fname, $s_ad, $st_id);
+			send__study_email($s_lname, $s_fname, $s_ad, $st_id);
 		}
 	}
 	else {
@@ -374,7 +374,7 @@ function email_all_students($ad, $st_id) {
 	}
 }
 
-function send_email($s_lname, $s_fname, $s_ad, $st_id) {
+function send_study_email($s_lname, $s_fname, $s_ad, $st_id) {
 	$conn = open_connection();
 	$studies = get_studies();
 	$study = $studies[$st_id];

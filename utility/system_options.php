@@ -34,8 +34,19 @@ $bcount = sizeof($blocks);
 /* first check that and POST variables are set - if so, then we need to do some action */
 if( !$is_repeat_action ) {
 	print $POST;
-	if( isset($_POST['modify_blocks']) ) {
+	if( isset($_POST['modify_blocks']) && !credits_exist() ) {
 		$message = update_blocks($bcount);
+	}
+	else if( isset($_POST['update_email']) ) {
+		$title = $_POST['update_email'];
+		//strip off additional text
+		$title = substr( $title, strpos( $title, "'" ) );
+		$title = substr( $title, 0, strlen( $title ) - strpos( $title, "'" ) - 1 );
+		$title = substr( $title, 1 );
+		$message = update_email($title, $_POST['new_text']);
+	}
+	else if( isset($_POST['send_test_email'])) {
+		$message = send_email($_SESSION['ad'], $_POST['email_choice']);
 	}
 	else
 		$message = '';
@@ -49,7 +60,7 @@ print_action_result($message);
 echo <<<EOF
 <div id="system_options">
 	<div class="section">
-		<h2>Modify Blocks</h2>		
+		<h2>Modify Blocks</h2> <i>Note: This feature will only work if no credits are assigned.</i>	
 		<form action="user.php?system_options" method="post">
 			<input type="hidden" name="action_timestamp" value="$tstamp"/>			
 			<p>All dates on this page use MM/DD/YY format:</p>
@@ -68,11 +79,48 @@ for( $i = 1; $i <= $bcount; ++$i )
 	echo "<input class=\"text\" type=\"text\" name=\"$name\" value=\"$date\"/>";
 	echo '</dd>';
 }
+$emails = get_all_emails();
+if( credits_exist() )
+	$modifiable = "disabled";
 echo <<<EOF
 			</dl>
-			<p><input type="submit" name="modify_blocks" value="Modify Blocks"/></p>
-		</div>
+			<p><input type="submit" name="modify_blocks" value="Modify Blocks" $modifiable/></p>
+		</form>
+	</div>
+	<div class="section">
 EOF;
+foreach($emails as $email) {
+	echo "
+		<h2>Modify Text for '$email[title]'</h2>
+		<form action=\"user.php?system_options\" method=\"post\">
+			<dl>
+				<textarea rows=\"4\" cols=\"50\" name=\"new_text\">
+$email[text]</textarea>
+				<p><input type=\"submit\" name=\"update_email\" value=\"Update text of '$email[title]'\"/></p>
+			</dl>
+		</form>
+	</br>";
+}
+echo '
+	<h2>Test Email</h2>
+		<form action="user.php?system_options" method="post">
+			<dl>
+				<dd>
+					<select name="email_choice" id="email_choice">';
+foreach($emails as $email) {
+	if($email['title'] == 'footer')
+		continue;
+	echo "<option value=\"$email[title]\" ";
+	if($i==1)
+		echo "selected=\"selected\"";
+	echo ">$email[title]</option>";
+}
+echo '				</select>
+					<input type="submit" name="send_test_email" value="Send Test Email"/>
+				</dd>
+			</dl>
+		</form>
+	</div>';
 
 /* -------------------------------------------------------------------------- */
 /* System Options functions */
@@ -80,7 +128,7 @@ EOF;
 
 function update_blocks($bcount) {
 	$times = array();
-	for( $i = 1; $i <= $bcount + 2; ++$i )
+	for( $i = 1; $i <= $bcount; ++$i )
 	{
 		$str = "b".$i."Date";
 		if( $_POST["$str"] == "00/00/00" )

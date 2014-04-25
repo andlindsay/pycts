@@ -32,7 +32,7 @@ if( !isset($_SESSION['active']) ) {
 	exit;
 }
 
-// load requested page based on GET variable
+/* load requested page based on GET variable */
 if( isset($_GET['user_management']) ) {
 	$title = "Administration";
 	$include = "utility/user_management.php";
@@ -58,8 +58,12 @@ else if( isset($_GET['studydisplay']) ) {
 	$include = "utility/studydisplay.php";
 }
 else if( isset($_GET['system_options']) ) {
-	$title = "$_GET[system_options]";
+	$title = "System Options";
 	$include = "utility/system_options.php";
+}
+else if( isset($_GET['sched']) ) {
+	$title = "Schedule";
+	$include = "utility/schedule.php";
 }
 else if( isset($_GET['report']) ) {
 	$title = "Credit Report";

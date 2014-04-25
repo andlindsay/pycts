@@ -36,21 +36,8 @@ else if( isset($_POST['remove']) )
 else
 	$message = '';
 
-$block_num = 0;
-$blocks = get_blocks();
-$block_one_start = $blocks[1];
-$block_two_start = $blocks[2];
-$block_three_start = $blocks[3];
-$semester_end = $blocks[4];
-
-if( time() >= $block_one_start && time() < $block_two_start )
-	$block_num = 1;
-else if( time() >= $block_two_start && time() < $block_three_start )
-	$block_num = 2;
-else if( time() >= $block_three_start && time() < $semester_end )
-	$block_num = 3;
-else
-	$block_num = 1;
+$block_num = get_current_block();
+$block_count = count(get_blocks());
 
 $studentinfo = query_students($_GET['studentdisplay']);
 $studentcredits = query_credits($_GET['studentdisplay'], false);
@@ -76,11 +63,7 @@ echo <<<EOF
 	<br><br>
 EOF;
 
-if( $total_credits == 1 )
-	echo "<p>This student has <strong>$total_credits</strong> credit.</p>";
-else
-	echo "<p>This student has <strong>$total_credits</strong> credits.</p>";
-
+echo "<p>This student has <strong>$total_credits</strong> credit(s).</p>";
 echo <<<EOF
 </div>
 <div class="section">
@@ -108,23 +91,11 @@ echo <<<EOF
 		<dd>
 			<select name="block_num">
 EOF;
-if( $block_num == 1 )
-{
-	echo "<option value=\"1\" selected=\"selected\">1</option>";
-	echo "<option value=\"2\">2</option>";
-	echo "<option value=\"3\">3</option>";
-}
-else if( $block_num == 2 )
-{
-	echo "<option value=\"1\">1</option>";
-	echo "<option value=\"2\" selected=\"selected\">2</option>";
-	echo "<option value=\"3\">3</option>";
-}
-else if( $block_num == 3 )
-{
-	echo "<option value=\"1\">1</option>";
-	echo "<option value=\"2\">2</option>";
-	echo "<option value=\"3\" selected=\"selected\">3</option>";
+for( $i=1; $i<$block_count; ++$i ) {
+	echo "<option value=\"$i\"";
+	if( $i == $block_num )
+		echo ' selected="selected"';
+	echo ">$i</option>";
 }
 
 echo <<<EOF
@@ -171,23 +142,11 @@ echo <<<EOF
 		<dd>
 			<select name="block_num_study">
 EOF;
-	if( $block_num == 1 )
-	{
-		echo "<option value=\"1\" selected=\"selected\">1</option>";
-		echo "<option value=\"2\">2</option>";
-		echo "<option value=\"3\">3</option>";
-	}
-	else if( $block_num == 2 )
-	{
-		echo "<option value=\"1\">1</option>";
-		echo "<option value=\"2\" selected=\"selected\">2</option>";
-		echo "<option value=\"3\">3</option>";
-	}
-	else if( $block_num == 3 )
-	{
-		echo "<option value=\"1\">1</option>";
-		echo "<option value=\"2\">2</option>";
-		echo "<option value=\"3\" selected=\"selected\">3</option>";
+	for( $i=1; $i<$block_count; ++$i ) {
+		echo "<option value=\"$i\"";
+		if( $i == $block_num )
+			echo ' selected="selected"';
+		echo ">$i</option>";
 	}
 echo <<<EOF
 
@@ -357,10 +316,10 @@ function studentdisplay_add_misc_credits($num_credits, $desc, $s_ad) {
 	if( empty($desc) )
 		return 'ERROR: You must enter a description.';
 	$block_num = $_POST['block_num'];
-	if( $block_num == 1 || $block_num == 2 || $block_num == 3 )
+	if( $block_num < count(get_blocks()) )
 		$result = insert_credits(array($s_ad), $num_credits, -1, $desc, $_SESSION['ad'], $block_num);
 	if( $result )
-		send_addition_email($s_ad, NULL, $num_credits);
+		send_email($s_ad, 'credits added misc');
 		return 'Credits were added successfully.';
 	return 'ERROR: Credits could not be added. Not all credits could be added successfully, please try again.';
 }
@@ -370,10 +329,9 @@ function studentdisplay_add_study_credits($st_id, $desc, $s_ad) {
 	$num_credits = $studies[$_POST['st_id']]['st_credits'];
 	$s_desc = $studies[$_POST['st_id']]['st_desc'];
 	$block_num = $_POST['block_num_study'];
-	if( $block_num == 1 || $block_num == 2 || $block_num == 3 )
-		$result = insert_credits(array($s_ad), $num_credits, $st_id, $desc, $_SESSION['ad'], $block_num);
+	$result = insert_credits(array($s_ad), $num_credits, $st_id, $desc, $_SESSION['ad'], $block_num);
 	if( $result )
-		send_addition_email($s_ad, $s_desc, $num_credits);
+		send_email($s_ad, 'credits added study');
 		return 'Credits were added successfully.';
 	return 'ERROR: Credits could not be added. Not all credits could be added successfully, please try again.';
 }
@@ -381,7 +339,7 @@ function studentdisplay_add_study_credits($st_id, $desc, $s_ad) {
 function studentdisplay_remove_credits($desc, $ad){
 	if( empty($desc) )
 		return 'ERROR: You must enter a description.';
-	send_removal_email($ad, $desc);
+	send_email($s_ad, 'credits removed');
 	$identifiers = array();
 	$misc_pids = array();
 	foreach( $_POST as $key => $val ) {
@@ -419,81 +377,6 @@ function studentdisplay_remove_credits($desc, $ad){
 	if( $success )
 		return 'All credits were removed successfully.';
 	return 'ERROR: There was a database error, not all credits were removed.';
-}
-
-function send_addition_email($s_ad, $s_desc, $s_credits){
-	$recipient = $s_ad . "@clarkson.edu";
-
-	$fname = query_student_fname($s_ad);
-	$lname = query_student_lname($s_ad);
-	
-
-	$subject = "PY151 Research Credits Added for " . $fname . " " . $lname;
-	$headers = "From: donotreply@clarkson.edu" . "\r\n" . "X-Mailer: PHP/" . phpversion() . "\r\n" . "Content-type: text/html\r\n";
-	/* use PHP object buffereing to make it easier to output the HTML message */
-	ob_start();
-	
-	if( $s_desc == NULL )
-		$message = "<b>$s_credits</b> miscellaneous credit(s) have been added to your PYCTS account.";
-	else
-		$message = "<b>$s_credits</b> credit(s) have been added to your PYCTS account for the study: <b>$s_desc.</b>";
-
-echo <<<EOF
-<html>
-	<head></head>
-	<body>
-		<div id="studentcontent">
-			<p>$message</p>
-			<p>This is an automatically-generated email, please do not reply to it. If you have questions, please ask your professor.</p>
-		</div>
-	</body>
-</html>
-EOF;
-
-	$message = ob_get_contents();
-	ob_end_clean();
-	$success = mail($recipient, $subject, $message, $headers);
-	if( $success ) {
-		$email_msg = "The report has been sent.";
-	}
-	else {
-		$email_msg = "Oops! Something went wrong contacting the mail server, your report could not be sent.";
-	}
-}
-
-function send_removal_email($s_ad, $desc){
-	$recipient = $s_ad . "@clarkson.edu";
-
-	$fname = query_student_fname($s_ad);
-	$lname = query_student_lname($s_ad);
-
-	$subject = "PY151 Research Credits Removed for " . $fname . " " . $lname;
-	$headers = "From: donotreply@clarkson.edu" . "\r\n" . "X-Mailer: PHP/" . phpversion() . "\r\n" . "Content-type: text/html\r\n";
-
-	/* use PHP object buffereing to make it easier to output the HTML message */
-	ob_start();
-
-echo <<<EOF
-<html>
-	<head></head>
-	<body>
-		<div id="studentcontent">
-			<p>Credits have been removed from your account. (Reason: <b>$desc</b>)</p>
-			<p>This is an automatically-generated email, please do not reply to it. If you have questions, please ask your professor.</p>
-		</div>
-	</body>
-</html>
-EOF;
-
-	$message = ob_get_contents();
-	ob_end_clean();
-	$success = mail($recipient, $subject, $message, $headers);
-	if( $success ) {
-		$email_msg = "The report has been sent.";
-	}
-	else {
-		$email_msg = "Oops! Something went wrong contacting the mail server, your report could not be sent.";
-	}
 }
 
 ?>

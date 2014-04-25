@@ -3,19 +3,17 @@
 -- http://www.phpmyadmin.net
 --
 -- Host: 128.153.5.119
--- Generation Time: Mar 07, 2014 at 01:39 PM
+-- Generation Time: Mar 12, 2014 at 04:58 PM
 -- Server version: 5.0.95
 -- PHP Version: 5.1.6
 
 SET SQL_MODE="NO_AUTO_VALUE_ON_ZERO";
 
 --
--- Database: `researchcredit_points_testing`
+-- Database: `researchcredit_points`
 --
 
 -- --------------------------------------------------------
-
-CREATE database researchcredit_points;
 
 --
 -- Table structure for table `blocks`
@@ -24,6 +22,18 @@ CREATE database researchcredit_points;
 CREATE TABLE IF NOT EXISTS `blocks` (
   `block` int(1) NOT NULL,
   `u_time` int(10) NOT NULL
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `emails`
+--
+
+CREATE TABLE IF NOT EXISTS `emails` (
+  `title` varchar(128) NOT NULL,
+  `text` varchar(1024) NOT NULL,
+  PRIMARY KEY  (`title`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 -- --------------------------------------------------------
@@ -49,7 +59,7 @@ CREATE TABLE IF NOT EXISTS `points` (
   KEY `st_id` (`st_id`),
   KEY `u_add_ad` (`u_add_ad`),
   KEY `u_rem_ad` (`u_rem_ad`)
-) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=7176 ;
+) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=7274 ;
 
 -- --------------------------------------------------------
 
@@ -81,4 +91,3 @@ CREATE TABLE IF NOT EXISTS `users` (
   `u_prof` varchar(64) NOT NULL,
   PRIMARY KEY  (`u_ad`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
-

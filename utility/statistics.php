@@ -52,8 +52,8 @@ echo '</div>';
 echo '<div class="section">';
 $profs = array();
 foreach( $students as $student ) {
-	if( in_array($student['u_prof'], $profs) == false )
-		$profs[] = $student['u_prof'];
+	if( in_array($student['prof'], $profs) == false )
+		$profs[] = $student['prof'];
 }
 
 $prof_nums = array();
@@ -62,8 +62,8 @@ foreach( $profs as $prof ) {
 }
 
 foreach( $students as $student) {
-	$prof_nums[$student['u_prof']]['num_students']++;
-	$prof_nums[$student['u_prof']]['tot_credits']+=$student['u_credits'];
+	$prof_nums[$student['prof']]['num_students']++;
+	$prof_nums[$student['prof']]['tot_credits']+=$student['credits'];
 }
 
 echo <<<EOF

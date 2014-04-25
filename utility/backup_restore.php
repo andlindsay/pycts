@@ -48,11 +48,13 @@ if( !$is_repeat_action ) {
 		$message = br_create_backup();
 	else if( isset( $_POST['restore'] ) )
 		$message = br_backup_restore();
-	else if( isset($_POST['database_wipe']) ) {
-				$message = admin_database_wipe($_POST['confirm']);
-		}else if( isset($_POST['csv']) ){
-				$message = upload_csv();
-		}
+	else if( isset($_POST['database_wipe']) )
+        $message = admin_database_wipe($_POST['confirm']);
+    else if( isset($_POST['csv']) ){
+		create_blocks($_POST['block_amt']);
+		create_points_view();
+        $message = upload_csv();
+    }
 	else
 		$message = '';
 }
@@ -61,41 +63,50 @@ else
 
 print_action_result( $message );
 $counts = get_totals();
+$bcount = count(get_blocks())-1;
 $tstamp = time();
+$upload_state = "";
+if( credits_exist() )
+	$upload_state = "disabled";
 
 echo <<<EOF
 <div id="backup_restore">
 	<div class="section">
-		<p>
-			With this utility, you can create a backup of the database and restore from it later. The backup includes all students in the roster 
-			and their credit counts, but any restored credits will appear as miscellaneous credits.
-		</p>
-		<p>Right now, there are $counts[credits] credits distributed to $counts[students] students.</p>	
+		<p>There are currently $counts[credits] credits distributed to $counts[students] students.</p>	
 	</div>
 
 	<div class="section">
-		<h2>CSV Upload</h2>
-		<p>You can add students to the roster in bulk by uploading a CSV file of student information.</p>		
-		<p>You <strong>must</strong> observe the following rules when creating the CSV:</p>		
+		<h2>Roster Creation</h2> <i>Note: This feature will only work if no credits are assigned.</i>
+		<p>Students can be added to the roster in bulk by uploading a CSV file of student information. For information on properly formatting a CSV file, please see below.</p>
+		<p>This will generally be the first step after setting up all Professor and Research Assistant users.</p>
+		
+		<form enctype="multipart/form-data" action="user.php?backup_restore" method="post">
+			<input type="hidden" name="action_timestamp" value="$tstamp"/>
+			<p>Choose CSV <input name="uploaded" type="file" $upload_state/></p>
+			<p>This setting specifies how many sections the semester will be divided into.</p>
+			<p>If you do not want to divide the semester into sections, choose 1.</p>
+			<p>The default dates can be changed in <a href="user.php?system_options">System Options</a> as long as no credits have been assigned.</p>
+			<p>
+				Amount of Blocks: 
+				<input type="number" name="block_amt" maxlength="2" value=$bcount min="1">
+			</p>
+			<p><input type="submit" name="csv" value="Upload CSV" $upload_state/></p>
+		</form>
+		</br>
+		<h2>Rules for creating a CSV:</h2>
 		<ul>
 			<li>The field separator shall be a comma.</li>
 			<li>Quotes shall be used to delimit text fields (such as names).</li>
-			<li>The first row in the CSV is a "header" row, and shall not contain student information.</li>
+			<li>The first row in the CSV is a header row, and shall not contain student information.</li>
 			<li>The expected order of data fields is: <tt>last name, first name, AD username, professor's AD name</tt>.</li>
 		</ul>
-		<p>So, for example, a row in this CSV might look like this:</p>
+		<p>The following is a valid example of a CSV row:</p>
 		<pre>"bushey","joe","busheyj","awilke"</pre></br>
 		<p>
 			If you wish, use the pre-formatted <a href="utility/pycts-template.csv">template CSV file</a>. Open it in the spreadsheet application 
 			of your choice and copy in the values you wish to use. When you're finished, be sure to save it as a CSV file. Refer to the PYCTS user 
 			manual for a thorough explanation of the CSV formatting rules.
 		</p>
-		
-		<form enctype="multipart/form-data" action="user.php?backup_restore" method="post">
-			<input type="hidden" name="action_timestamp" value="$tstamp"/>
-			<p>Choose CSV <input name="uploaded" type="file"/></p>
-			<p><input type="submit" name="csv" value="Upload CSV"/></p>
-		</form>
 	</div>
 												
 	<div class="section">
@@ -147,71 +158,60 @@ echo <<<EOF
 </div>
 EOF;
 
+echo '</div> <!-- closing div "backup_restore" -->';
 /* -------------------------------------------------------------------------- */
 /* upload functions */
 /* -------------------------------------------------------------------------- */
 function upload_csv() {
-	// check that a file was uploaded
-	if( $_FILES['uploaded']['error'] == 4 ) {
-			return 'ERROR: No file selected for upload.';
-	}
-	// check file type, we will only accept CSVs
-	$is_csv = ($_FILES['uploaded']['type'] == "text/comma-separated-values") ||
-		($_FILES['uploaded']['type'] == "text/x-comma-separated-values") ||
-		($_FILES['uploaded']['type'] == "application/vnd.ms-excel") ||
-		($_FILES['uploaded']['type'] == "text/csv");
-	if ( $is_csv ) {
-		$upname = "utility/upload/" . $_SESSION['ad'] . "_" . time();
-		$success = move_uploaded_file($_FILES['uploaded']['tmp_name'], $upname);
-		if( !$success )
-			return 'ERROR: An upload error occurred.';
-	}
-	else
-			return "ERROR: This file has type: \"" . $_FILES['uploaded']['type'] . "\", only CSV file uploads are accepted.";
+        // check that a file was even uploaded
+        if( $_FILES['uploaded']['error'] == 4 ) {
+                return 'ERROR: No file selected for upload.';
+        }
+        $upname = "utility/upload/" . $_SESSION['ad'] . "_" . time();
+        $success = move_uploaded_file($_FILES['uploaded']['tmp_name'], $upname);
+        if( !$success )
+            return 'ERROR: An upload error occurred.';
+        
+        // now update the database with the contents of the file
+        $handle = fopen($upname, "r");
+        if( !$handle )
+                return 'ERROR: The uploaded file could not be opened.';
 
-	// now update the database with the contents of the file
-	$handle = fopen($upname, "r");
-	if( !$handle )
-			return 'ERROR: The uploaded file could not be opened.';
-
-	// eat the first line, as it's supposed to be a header
-	$data = fgetcsv($handle, 1000, ",");
-	$students = array();
-	if( count($data) != 4 ) {
-		fclose($handle);
-		unlink($upname);
-		return 'ERROR: CSV is not formatted correctly, there aren\'t 4 data columns';
-	}
-	
-	while( ($data = fgetcsv($handle, 1000, ",")) !== FALSE ) {
-		$student = array('lname' => $data[0], 'role' => '2', 'fname' => $data[1], 'ad' => $data[2], 'prof' => $data[3]);
-		$students[] = $student;
-	}
-	fclose($handle);
-	unlink($upname);
-	$results = insert_students($students);
-	$success = true;
-	foreach( $results as $result ) {
-		if( $result['code'] != 'ok' )
-			$success = false;
-	}
-	
-	if( $success ) {
-		return 'All students were imported successfully.';
-	}
-	
-	$message = 'ERROR: There was a problem, not all students could be added. Here are the results:<br/><br/>';
-	foreach( $results as $result ) {
-		if( $result['code'] == 'exists' )
-			$message .= "<tt>$result[ad]</tt>: student already exists.<br/>";
-		else if( $result['code'] == 'error' )
-			$message .= "<tt>$result[ad]</tt>: database error occurred when adding student.<br/>";
-		else if( $result['code'] == 'ok' )
-			$message .= "<tt>$result[ad]</tt>: this student was added successfully.<br/>";
-		else if( $result['code'] == 'root' )
-			$message .= "<strong><tt>$result[ad]</tt>: this AD username is reserved for the system root user.</strong><br/>";
-	}
-	return $message;
+        // eat the first line, as it's supposed to be a header
+        $data = fgetcsv($handle, 1000, ",");
+        $students = array();
+        if( count($data) != 4 ) {
+                fclose($handle);
+                unlink($upname);
+                return 'ERROR: CSV is not formatted correctly, there aren\'t 4 data columns';
+        }
+     while( ($data = fgetcsv($handle, 1000, ",")) !== FALSE ) {
+                $student = array('lname' => $data[0], 'role' => '2', 'fname' => $data[1], 'ad' => $data[2], 'prof' => $data[3]);
+                $students[] = $student;
+        }
+        fclose($handle);
+        unlink($upname);
+        $results = insert_students($students);
+        $success = true;
+        foreach( $results as $result ) {
+                if( $result['code'] != 'ok' )
+                        $success = false;
+        }
+        if( $success ) {
+                return 'All students were imported successfully. <a href="user.php?system_options">Edit Blocks</a>.';
+        }
+        $message = 'ERROR: There was a problem, not all students could be added. Here are the results:<br/><br/>';
+        foreach( $results as $result ) {
+                if( $result['code'] == 'exists' )
+                        $message .= "<tt>$result[ad]</tt>: student already exists.<br/>";
+                else if( $result['code'] == 'error' )
+                        $message .= "<tt>$result[ad]</tt>: database error occurred when adding student.<br/>";
+                else if( $result['code'] == 'ok' )
+                        $message .= "<tt>$result[ad]</tt>: this student was added successfully.<br/>";
+                else if( $result['code'] == 'root' )
+                    $message .= "<strong><tt>$result[ad]</tt>: this AD username is reserved for the system root user.</strong><br/>";
+        }
+        return $message;
 }
 
 
@@ -219,28 +219,26 @@ function upload_csv() {
 /* backup/restore functions */
 /* -------------------------------------------------------------------------- */
 function admin_database_wipe($confirm) {
-	if( empty($confirm) || $confirm != 'confirm' )
-		return "ERROR: You must type 'confirm' in the text box to perform this action.";
-	$success = wipedb();
-	
-	if( $success )
-		return "All students and credits were permanently deleted.";
-	else
-		return "ERROR: Database wipe failed.";
+        if( empty($confirm) || $confirm != 'confirm' )
+                return "ERROR: You must type 'confirm' in the text box to perform this action.";
+        $success = wipedb();
+        if( $success )
+                return "All students and credits were permanently deleted.";
+        else
+                return "ERROR: Database wipe failed.";
 }
 
 function br_backup_restore() {
 	if( $_POST['confirm'] != "confirm" )
 		return 'ERROR: Please type the word "confirm" in the confirmation box.';
-		
-	if( $_FILES['uploaded']['error'] == 4 )
+	if( $_FILES['uploaded']['error'] == 4 ) {
 		return 'ERROR: No file selected for upload.';
-	
-	$is_csv = ($_FILES['uploaded']['type'] == "text/comma-separated-values") ||
+	}
+	if ( 	($_FILES['uploaded']['type'] == "text/comma-separated-values") ||
 		($_FILES['uploaded']['type'] == "text/x-comma-separated-values") ||
 		($_FILES['uploaded']['type'] == "application/vnd.ms-excel") ||
-		($_FILES['uploaded']['type'] == "text/csv");
-	if ( $is_csv ) {
+		($_FILES['uploaded']['type'] == "text/csv") ) {
+		
 		$upname = "utility/upload/" . $_SESSION['ad'] . "_" . time() . '.csv';
 		$success = move_uploaded_file( $_FILES['uploaded']['tmp_name'], $upname );
 		if( !$success ) 
@@ -248,18 +246,15 @@ function br_backup_restore() {
 	}
 	else
 		return "ERROR: This file has type: \"" . $_FILES['uploaded']['type'] . "\", only CSV file uploads are accepted.";
-		
 	$handle = fopen( $upname, "r" );
 	if( !$handle )
 		return 'ERROR: The uploaded file could not be opened.';
-		
 	$data = fgetcsv($handle, 1000, ",");
 	if( count($data) != 5 ) {
 		fclose($handle);
 		unlink($upname);
 		return "ERROR: CSV is not formatted correctly, there aren't 5 data columns.";
 	}
-	
 	/* the next line should be the date the backup was taken */
 	$date = fgetcsv( $handle, 1000, "," );
 	if( count($date) != 1 ) {
@@ -267,7 +262,6 @@ function br_backup_restore() {
 		unlink($upname);
 		return "ERROR: CSV is not formatted correctly, the date row is missing or wrong.";
 	}
-	
 	if( !wipedb() ) {
 		fclose($handle);
 		unlink($upname);
@@ -281,9 +275,9 @@ function br_backup_restore() {
 		$student['credit_success'] = insert_credits( array($student['ad']), $student['credits'], -1, "This credit was restored from a backup taken on $date[0].", $_SESSION['ad'] );
 		$students[] = $student;
 	}
-	
 	fclose($handle);
 	unlink($upname);
+
 
 	$failed = array();
 	foreach( $students as $student ) {

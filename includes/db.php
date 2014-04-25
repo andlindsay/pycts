@@ -176,7 +176,7 @@ function query_student_fname($ad) {
 	}
 	else {
 		$ad_san = mysql_real_escape_string($ad, $conn);
-		$query = "select * from students where u_ad = '$ad_san'";
+		$query = "select * from users where u_ad = '$ad_san'";
 	}
 	$result = mysql_query($query, $conn);
 	mysql_close($conn);
@@ -280,68 +280,58 @@ function get_totals() {
 	
 	returns: associative array of all entries in the points table
 */
-function get_all_students_credits($sort_name) {
-	$sort = "u_lname";			/* by default sort by last name if something is wonky */
-	if( $sort_name == "Last Name" )
-		$sort = "u_lname";
-	else if( $sort_name == "First Name" )
-		$sort = "u_fname";
-	else if( $sort_name == "AD Username" )
-		$sort = "u_ad";
-	else if( $sort_name == "Professor" )
-		$sort = "u_prof";
+function get_all_students_credits($sort_name, $dir) {
 	$conn = open_connection();
-	$query = "select u_ad, u_lname, u_fname, u_prof from users where u_role = 2 order by $sort asc;";
+	
+	if( $sort_name == "" || $sort_name == NULL )
+		$sort_name = "ad";
+		
+	$sort_san = mysql_real_escape_string($sort_name, $conn);
+	$query = "select $sort_san from points_totals;";
+	$result = mysql_query($query, $conn);
+	$num_rows = mysql_num_rows($result);
+	// if an invalid field was provided, sort by ad
+	if( $num_rows == 0 )
+		$sort_san = "ad";
+		
+	// make sure dir is a valid value
+	if( $dir != "asc" && $dir != "desc" )
+		$dir = "asc";
+	
+	// fetch all students who have credits
+	$query = "select * from points_totals order by $sort_san $dir;";
 	$result = mysql_query($query, $conn);
 	$students = array();
-	$num_rows = mysql_num_rows($result);
-	if( $num_rows == 0 )
-		return $students;
-	for($i=0; $i<$num_rows; $i++) {
-		$u_lname = mysql_result($result, $i, "u_lname");
-		$u_fname = mysql_result($result, $i, "u_fname");
-		$u_ad = mysql_result($result, $i, "u_ad");
-		$u_prof = mysql_result($result, $i, "u_prof");
-
-		$query = "select * from points where u_ad = '$u_ad' and u_rem_ad is null";
-		$result_points = mysql_query($query, $conn);
-		/*while($row = mysql_fetch_array($result_points)){
-			echo $row['u_amount']. ' - '. $row['u_ad'];
-			echo "<br />";
-		}*/
+	$block_count = count(get_blocks());
+	
+	while($row = mysql_fetch_assoc($result)) {		
+		$push = array('lname' => $row['u_lname'], 'fname' => $row['u_fname'], 'ad' => $row['ad'], 
+			'prof' => $row['u_prof'], 'credits' => $row['Total']);
 		
-		$query = "select sum(u_amount) as u_points from points where u_ad = '$u_ad' and u_rem_ad is null";
-		$result_points = mysql_query($query, $conn);
-		$u_points = mysql_result($result_points, 0, "u_points");
-
-		$query = "select sum(u_amount) as u_points from points where u_ad = '$u_ad' and u_rem_ad is null and
-			block_num = '1'";
-		$result_points = mysql_query($query, $conn);
-		$u_points_b1 = mysql_result($result_points, 0, "u_points");
-		
-		$query = "select sum(u_amount) as u_points from points where u_ad = '$u_ad' and u_rem_ad is null and 
-			block_num = 2";
-		$result_points = mysql_query($query, $conn);
-		$u_points_b2 = mysql_result($result_points, 0, "u_points");
-		
-		$query = "select sum(u_amount) as u_points from points where u_ad = '$u_ad' and u_rem_ad is null and 
-			block_num = 3";
-		$result_points = mysql_query($query, $conn);
-		$u_points_b3 = mysql_result($result_points, 0, "u_points");
-		
-		if( empty($u_points) )
-		        $u_points = 0;
-		if( empty($u_points_b1) )
-		        $u_points_b1 = 0;
-		if( empty($u_points_b2) )
-		        $u_points_b2 = 0;
-		if( empty($u_points_b3) )
-		        $u_points_b3 = 0;
-
-		$push = array('u_lname' => $u_lname, 'u_fname' => $u_fname, 'u_ad' => $u_ad, 'u_prof' => $u_prof, 'u_all_credits' => $result_points,
-			'u_credits' => $u_points, 'u_credits_b1' => $u_points_b1, 'u_credits_b2' => $u_points_b2, 'u_credits_b3' => $u_points_b3);
+		for($j = 1; $j < $block_count; ++$j) {
+			$column_name = "B".$j."Total";
+			$curr_block_total = $row["$column_name"];
+			if( $curr_block_total == NULL )
+				$curr_block_total = 0;
+			$push["credits_b$j"] = $curr_block_total;
+		}
 		$students[] = $push;
 	}
+	
+	// fetch all students without credits
+	mysql_close($conn);
+	$conn = open_connection();
+	$query = "SELECT u_lname AS lname, u_fname AS fname, u_ad AS ad, u_prof AS prof 
+		FROM users WHERE u_ad NOT IN (SELECT ad FROM points_totals) AND u_role = 2;";
+	$result = mysql_query($query, $conn);
+	while($row = mysql_fetch_assoc($result)) {
+		$row["credits"] = 0;
+		for($j = 1; $j < $block_count; ++$j) {
+			$row["credits_b$j"] = 0;
+		}
+		$students[] = $row;
+	}
+
 	mysql_close($conn);
 	return $students;
 }
@@ -391,7 +381,7 @@ function insert_students($students) {
 			$student_fname_san = mysql_real_escape_string($student['fname'], $conn);
 			$student_ad_san = mysql_real_escape_string($student['ad'], $conn);
 			$student_prof_san = mysql_real_escape_string($student['prof'], $conn);
-			$query = "insert into students ( u_ad, u_role, u_lname, u_fname, u_prof ) values ( '$student_ad_san', '2', '$student_lname_san', '$student_fname_san', '$student_prof_san' );";
+			$query = "insert into users ( u_ad, u_role, u_lname, u_fname, u_prof ) values ( '$student_ad_san', '2', '$student_lname_san', '$student_fname_san', '$student_prof_san' );";
 			if( $student_ad_san == 'root' )
 				$return[] = array('ad' => $student['ad'], 'code' => 'root');
 			else {
@@ -590,7 +580,7 @@ function delete_student($ad) {
 */
 function get_studies() {
 	$conn = open_connection();
-	$query = "select * from studies";
+	$query = "select * from studies order by st_irb";
 	$result = mysql_query($query, $conn);
 	mysql_close($conn);
 	$studies = array();
@@ -825,7 +815,7 @@ function br_create_backup() {
         $line = '"' . date( 'Y-m-d' ) . '"' . "\n";
         if( fwrite( $csvhandle, $line ) === false )
                 return "ERROR: Write failed, backup is incomplete.";
-        $students = get_all_students_credits( "Last Name" );
+        $students = get_all_students_credits( "Last Name", "asc" );
         foreach( $students as $student ) {
                 $credits = $student[u_credits];
                 $line = "\"$student[u_lname]\",\"$student[u_fname]\",\"$student[u_ad]\",\"$student[u_prof]\",\"$credits\",\"$student[u_creditu_b1]\",\"$student[u_creditu_b2]\",\"$student[u_creditu_b3]\"";
@@ -837,4 +827,165 @@ function br_create_backup() {
         return "Backup is complete. You can download the file <a href=\"utility/download/$downname\">here</a>.";
 }
 
+function get_email_text($type) {
+	$conn = open_connection();
+	$query = "select text from emails where title = '$type'";
+	$result = mysql_query($query);
+	mysql_close($conn);
+	return mysql_result($result, 0, 'text');
+}
+
+function get_all_emails() {
+	$conn = open_connection();
+	$query = "select * from emails order by title";
+	$result = mysql_query($query, $conn);
+	$emails = array();
+	$numrows = mysql_num_rows($result);
+	for($i=0; $i<$numrows; $i++) {
+		$title = mysql_result($result, $i, "title");
+		$text = mysql_result($result, $i, "text");
+	$ad = mysql_result($result, $i, "u_ad");
+		$emails[$i] = array('title' => $title, 'text' => $text);
+	}
+	mysql_close($conn);
+	return $emails;
+}
+
+function update_email($title, $new_text) {
+	$conn = open_connection();
+	$query = "update emails set text = '$new_text' where title = '$title'";
+	$result = mysql_query($query, $conn);
+	if( $result )
+		return "Succesfully updated email text for '$title'";
+	else
+		return "There was an error trying to update email text for '$title'";
+}
+
+function send_email($s_ad, $message_type){
+	$recipient = $s_ad . "@clarkson.edu";
+
+	$fname = query_student_fname($s_ad);
+	$lname = query_student_lname($s_ad);
+	
+	$subject = "PY151 Research Credits Added for " . $fname . " " . $lname . " (".$s_ad.")";
+	$headers = "From: donotreply@clarkson.edu" . "\r\n" . "X-Mailer: PHP/" . phpversion() . "\r\n" . "Content-type: text/html\r\n";
+	
+	/* use PHP object buffering to make it easier to output the HTML message */
+	ob_start();
+	
+	$email_string = get_email_text($message_type);
+	$footer_string = get_email_text("footer");
+	$time = getdate();
+	$AMPM = 'AM';
+	if($time['hours'] > 12) {
+		$time['hours'] -= 12;
+		$AMPM = 'PM';
+	}
+	if($time['hours'] < 10)
+		$timestring = '0'.$time['hours'];
+	else
+		$timestring = $time['hours'];
+	
+	if($time['minutes'] < 10)
+		$timestring .= ':0'.$time['minutes'];
+	else
+		$timestring .= ':'.$time['minutes'];
+		
+	if($time['seconds'] < 10)
+		$timestring .= ':0'.$time['seconds'];
+	else
+		$timestring .= ':'.$time['seconds'];
+		
+echo <<<EOF
+<html>
+	<head></head>
+	<body>
+		<div id="studentcontent">
+			<p>$email_string</p>
+			<p>This notification was generated $time[weekday], $time[mday] $time[month] at $timestring $AMPM.</p>
+			<p>$footer_string</p>
+		</div>
+	</body>
+</html>
+EOF;
+
+	$message = ob_get_contents();
+	ob_end_clean();
+	$success = mail($recipient, $subject, $message, $headers);
+	if( $success ) {
+		return "The report has been sent.";
+	}
+	else {
+		return "ERROR: Something went wrong contacting the mail server, your report could not be sent.";
+	}
+}
+
+function get_current_block()
+{
+	$timestamp = time();
+	$conn = open_connection();
+	$query = "SELECT block FROM blocks WHERE u_time < $timestamp ORDER BY block DESC LIMIT 1";
+	$result = mysql_query($query);
+	mysql_close($conn);
+	return mysql_result($result, 0, 'block');
+}
+
+function create_blocks($block_amt) 
+{
+	$conn = open_connection();
+	$query = "TRUNCATE blocks";
+	mysql_query($query);
+	
+	$timestamp = time();
+	for( $i = 1; $i <= $block_amt+1; ++$i ) {
+		$query = "INSERT INTO blocks VALUES ('$i', '$timestamp')";
+		//add four weeks
+		$timestamp += (4 * 7 * 24 * 60 * 60);
+		$result = mysql_query($query);
+		if( !$result ) {
+			mysql_close($conn);
+			return "ERROR: Unable to insert blocks";
+		}
+	}
+	mysql_close($conn);
+	return "Succesfully updated blocks";
+}
+
+function credits_exist() {
+	$conn = open_connection();
+	$query = "SELECT COUNT(*) FROM points";
+	$result = mysql_query($query);
+	if(mysql_result($result, 0) == "0")
+	{
+		mysql_close($conn);
+		return false;
+	}
+	mysql_close($conn);
+	return true;
+}
+
+function create_points_view() {	
+	//build query
+	$query = "CREATE OR REPLACE VIEW `points_totals` AS select `p1`.`u_ad` AS `ad`, 
+		`u`.`u_lname` AS `u_lname`, `u`.`u_fname` AS `u_fname`,`u`.`u_prof` AS `u_prof`, 
+		sum(`p1`.`u_amount`) AS `Total`";
+	$block_count = count(get_blocks());
+	for($i = 1; $i < $block_count; ++$i) {
+		$iplusone = $i + 1;
+		$str = "B".$i."Total";
+		$query .= ", (select sum(`p$iplusone`.`u_amount`) AS `SUM(u_amount)` from `points` `p$iplusone` where ((`p$iplusone`.`block_num` = $i) and (`p$iplusone`.`u_ad` = `p1`.`u_ad`) and (`p$iplusone`.`time_rem` IS NULL))) AS $str";
+	}
+	$query .= " from (`points` `p1` join `users` `u` on((`p1`.`u_ad` = `u`.`u_ad`))) where `p1`.`time_rem` IS NULL group by `p1`.`u_ad`";
+	//echo $query;
+	$conn = open_connection();
+	$result = mysql_query($query);
+	if(!$result) {
+		echo $query;
+		echo mysql_error();
+		mysql_close($conn);
+		return "Failed to create view";
+	}
+	mysql_close($conn);
+	return true;
+}
 ?>

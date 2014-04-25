@@ -45,7 +45,7 @@ print_action_result($message);
 
 echo '<div id="display">';
 
-$all_students = get_all_students_credits($_GET);
+$all_students = get_all_students_credits($_GET['sort'], $_GET['dir']);
 $tot_students = count($all_students);
 
 if( $tot_students == 0 ) {
@@ -111,41 +111,16 @@ if( $num_students_shown == 0 ) {
 	return;
 }
 
-/* if we need to reorder the list of students, do it now */
 $last_sort = $_GET['sort'];
 
-if( isset($_GET['sort']) ) {
-	// make sure dir is a valid value
-	if( !isset($_GET['dir']) || ($_GET['dir'] != 1 && $_GET['dir'] != -1) )
-		$dir = 1;
-	
-	//$dir
-	
-	if( $_GET['sort'] == 'lname' )
-		usort( $students, 'compare_students_lname' );
-	else if( $_GET['sort'] == 'fname' )
-		usort( $students, 'compare_students_fname' );
-	else if( $_GET['sort'] == 'ad' )
-		usort( $students, 'compare_students_ad' );
-	else if( $_GET['sort'] == 'prof' )
-		usort( $students, 'compare_students_prof' );
-	else if( $_GET['sort'] == 'credits' )
-		usort( $students, 'compare_students_credits' );
-	else if( $_GET['sort'] == 'credits_b1' )
-		usort( $students, 'compare_students_credits_b1' );
-	else if( $_GET['sort'] == 'credits_b2' )
-		usort( $students, 'compare_students_credits_b2' );
-	else if( $_GET['sort'] == 'credits_b3' )
-		usort( $students, 'compare_students_credits_b3' );
-		
-	if( $_GET['dir'] == 1)
-		$dir = -1;
+if( isset($_GET['sort']) ) {		
+	if( $_GET['dir'] == "asc")
+		$dir = "desc";
 	else
-		$dir = 1;
-	
+		$dir = "asc";
 }
 else
-	$dir = -1;
+	$dir = "desc";
 
 $studies = get_studies();
 
@@ -182,40 +157,17 @@ EOF;
 
 $block_num = 0;
 $blocks = get_blocks();
-$block_one_start = $blocks[1];
-$block_two_start = $blocks[2];
-$block_three_start = $blocks[3];
-$semester_end = $blocks[4];
-if(time() >= $block_one_start && time() < $block_two_start) {
-        $block_num = 1;
-} else if(time() >= $block_two_start && time() < $block_three_start) {
-        $block_num = 2;
-} else if(time() >= $block_three_start && time() < $semester_end) {
-        $block_num = 3;
-} else {
-        $block_num = 3;
-}
+$block_count = count($blocks)-1;
+$block_num = get_current_block();
 
 echo "<dt>Block:</dt>";
 echo "<dd>";
 echo "<select name=\"block_num\">";
-if( $block_num == 1 )
-{
-        echo "<option value=\"1\" selected=\"selected\">1</option>";
-        echo "<option value=\"2\">2</option>";
-        echo "<option value=\"3\">3</option>";
-}
-else if( $block_num == 2 )
-{
-        echo "<option value=\"1\">1</option>";
-        echo "<option value=\"2\" selected=\"selected\">2</option>";
-        echo "<option value=\"3\">3</option>";
-}
-else if( $block_num == 3 )
-{
-        echo "<option value=\"1\">1</option>";
-        echo "<option value=\"2\">2</option>";
-        echo "<option value=\"3\" selected=\"selected\">3</option>";
+for( $i=1; $i<=$block_count; ++$i ) {
+	echo "<option value=\"$i\"";
+	if( $i == $block_num )
+		echo ' selected="selected"';
+	echo ">$i</option>";
 }
 echo "</select>";
 echo "</dd>";
@@ -224,16 +176,11 @@ echo <<<EOF
 
 
 <p>
-<input type="submit" name="quick_add" value="Add Credits to Selection"/>
+	<input type="submit" name="quick_add" value="Add Credits to Selection"/>
 </p>
 EOF;
 }
 
-/*<form action="user.php" method="post">
-<p>
-<input type="submit" name="create" value="Create Backup"/>
-</p>
-</form>*/
 echo <<<EOF
 <p id="student_count">
 Showing $num_students_shown/$tot_students students.
@@ -245,14 +192,15 @@ Showing $num_students_shown/$tot_students students.
 <table border="1">
 <tr>
 EOF;
-	echo '<th><a href="user.php?sort=lname&dir='.$dir.'">Last Name</a></th>';
-	echo '<th><a href="user.php?sort=fname&dir='.$dir.'">First Name</a></th>';
+	echo '<th><a href="user.php?sort=u_lname&dir='.$dir.'">Last Name</a></th>';
+	echo '<th><a href="user.php?sort=u_fname&dir='.$dir.'">First Name</a></th>';
 	echo '<th><a href="user.php?sort=ad&dir='.$dir.'">AD Username</a></th>';
-	echo '<th><a href="user.php?sort=prof&dir='.$dir.'">Professor</a></th>';
-	echo '<th><a href="user.php?sort=credits&dir='.$dir.'">Total</a></th>';
-	echo '<th><a href="user.php?sort=credits_b1&dir='.$dir.'">Block 1</a></th>';
-	echo '<th><a href="user.php?sort=credits_b2&dir='.$dir.'">Block 2</a></th>';
-	echo '<th><a href="user.php?sort=credits_b3&dir='.$dir.'">Block 3</a></th>';
+	echo '<th><a href="user.php?sort=u_prof&dir='.$dir.'">Professor</a></th>';
+	echo '<th><a href="user.php?sort=Total&dir='.$dir.'">Total</a></th>';
+	for($i = 1; $i <= $block_count; ++$i) {
+		$str = "B".strval($i)."Total";
+		echo "<th><a href=\"user.php?sort=$str&dir=".$dir."\">Block $i</a></th>";		
+	}
 	
 echo <<<EOF
 	<th>
@@ -273,18 +221,20 @@ foreach( $students as $student ) {
 
 echo <<<EOF
 
-	<td><a href="user.php?studentdisplay=$student[u_ad]">$student[u_lname]</a></td>
-	<td>$student[u_fname]</td>
-	<td>$student[u_ad]</td>
-	<td>$student[u_prof]</td>
+	<td><a href="user.php?studentdisplay=$student[ad]">$student[lname]</a></td>
+	<td>$student[fname]</td>
+	<td>$student[ad]</td>
+	<td>$student[prof]</td>
 
-	<td class="center">$student[u_credits]</td>
-	<td class="center">$student[u_credits_b1]</td>
-	<td class="center">$student[u_credits_b2]</td>
-	<td class="center">$student[u_credits_b3]</td>
+	<td class="center">$student[credits]</td>
+
 EOF;
-
-	echo '<td class="center"><input type="checkbox" name="' . $student['u_ad'] . '" value="' . $student['u_ad'] . '"/></td>';
+	for($i = 1; $i <= $block_count; ++$i) {
+		$str = "credits_b".strval($i);
+		echo "<td class=\"center\">$student[$str]</td>";		
+	}
+	
+	echo '<td class="center"><input type="checkbox" name="' . $student['ad'] . '" value="' . $student['ad'] . '"/></td>';
 	echo '</tr>';
 }
 
@@ -322,32 +272,6 @@ function display_quick_add($st_id) {
 	if( $result )
 		return 'Credits were added successfully.';
 	return 'ERROR: Credits could not be added. Not all credits could be added successfully, please try again.';
-}
-
-/* these are used for sorting students */
-function compare_students_lname( $a, $b ) {
-	return $_GET['dir'] * strnatcmp( $a['u_lname'], $b['u_lname'] );
-}
-function compare_students_fname( $a, $b ) {
-	return $_GET['dir'] * strnatcmp( $a['u_fname'], $b['u_fname'] );
-}
-function compare_students_ad( $a, $b ) {
-	return $_GET['dir'] * strnatcmp( $a['u_ad'], $b['u_ad'] );
-}
-function compare_students_prof( $a, $b ) {
-	return $_GET['dir'] * strnatcmp( $a['u_prof'], $b['u_prof'] );
-}
-function compare_students_credits( $a, $b ) {
-	return $_GET['dir'] * strnatcmp( $a['u_credits'], $b['u_credits'] ) ;
-}
-function compare_students_credits_b1( $a, $b ) {
-	return $_GET['dir'] * strnatcmp( $a['u_credits_b1'], $b['u_credits_b1'] );
-}
-function compare_students_credits_b2( $a, $b ) {
-	return $_GET['dir'] * strnatcmp( $a['u_credits_b2'], $b['u_credits_b2'] );
-}
-function compare_students_credits_b3( $a, $b ) {
-	return $_GET['dir'] * strnatcmp( $a['u_credits_b3'], $b['u_credits_b3'] );
 }
 
 ?>
